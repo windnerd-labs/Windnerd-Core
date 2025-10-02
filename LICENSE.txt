@@ -1,0 +1,7 @@
+Copyright (C) 2025 WindNerd.net
+
+Software is licensed under the BSD 3-Clause License.
+Hardware is licensed under the CERN Open Hardware Licence Version 2 - Strongly Reciprocal (CERN-OHL-S-2.0).
+Documentation is licensed under the Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0).
+
+Full license texts are provided in the corresponding subfolders of this repository.
