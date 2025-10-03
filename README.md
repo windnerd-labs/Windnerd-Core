@@ -1,16 +1,16 @@
-# WindNerd Core - Open Source Development Board & Sensor for 3D-Printed Anemometers
+# WindNerd Core - Open Source Sensor & Development Board for 3D-Printed Anemometers
 
 
 
 ## Intro
 
-The WindNerd Core is a full magnetic sensor board designed to fit inside the WindNerd [**3D-printed-anemometer**](https://github.com/windnerd-labs/Anemometer-3D-files).
+The WindNerd Core is a **full magnetic** sensor board designed to fit inside the WindNerd [**3D-printed-anemometer**](https://github.com/windnerd-labs/Anemometer-3D-files).
 
 It is [**available as a kit**](https://windnerd.net/en/shop), which includes the board and essential parts like magnets and bearings.
 
 ![WindNerd Core Sensor/Dev board for 3D-printed anemometer](docs/img/windnerd-core-for-3D-printed-anemometer.jpg)
 
-You can use it as a dedicated wind sensor module for your weather station, or as an **Arduino compatible development board** that can, for example:
+You can use it as a dedicated wind **sensor module** for your weather station, or as an **Arduino compatible development board** that can, for example:
 
 - Control peripherals such as a radio modem to send data remotely
 - Drive LEDs that blink according to wind speed and direction
@@ -31,11 +31,11 @@ It can be connected to a computer using a **USB-serial-TTL adapter** or to any M
 ![Wiring WindNerd Core to computer using USB-serial-TTL adapter](docs/img/USB-TTL-adapter-wiring.jpg)
 
 
-The baudrate is 9600bps 1N8. This configuration allows fairly long wiring, e.g. to reach the top of a pole.  
+The baudrate is 9600bps 8N1. This configuration allows fairly long wiring, e.g. to reach the top of a pole.  
 
 Two types of messages are provided, the default speed unit is km/h and values are averaged for the last 10 minutes:  
 
-**Instant wind report** (every 3 Sec)
+**Instant wind** (every 3 Sec)
 
 `WNI,<speed>,<direction 0-359>`
 ex: `WNI,10.4,149`  
