@@ -66,21 +66,21 @@ void WN_Core::begin()
   pinMode(_north_led_pin, OUTPUT);
   digitalWrite(_north_led_pin, HIGH);
 
-  pinMode(_speed_input_pin, INPUT);
-  attachInterrupt(digitalPinToInterrupt(SPEED_INPUT), onSpeedPulseISR, RISING);
-
   wn_init_angle_sensor();
 
   tickerTimer = new HardwareTimer(TIM3);
   tickerTimer->setOverflow(TICK_HZ, HERTZ_FORMAT);
   tickerTimer->attachInterrupt(onTickerTimerISR);
   tickerTimer->resume();
+
+  pinMode(_speed_input_pin, INPUT);
+  attachInterrupt(digitalPinToInterrupt(SPEED_INPUT), onSpeedPulseISR, RISING);
 }
 
 // set the averaging period for average wind report
 bool WN_Core::setAveragingPeriodInSec(uint16_t period)
 {
-  if (period >= SAMPLE_DURATION && period <= ROLLING_BUFFER_LENGTH / SAMPLE_DURATION)
+  if (period >= SAMPLE_DURATION && period <= ROLLING_BUFFER_LENGTH * SAMPLE_DURATION)
   {
     _wind_average_period_sec = period;
     return true;
@@ -92,7 +92,7 @@ bool WN_Core::setAveragingPeriodInSec(uint16_t period)
 }
 
 // set the time interval between average wind reports
-bool WN_Core::setUpdateIntervalInSec(uint16_t period)
+bool WN_Core::setReportingIntervalInSec(uint16_t period)
 {
   if (period >= SAMPLE_DURATION)
   {
@@ -105,7 +105,7 @@ bool WN_Core::setUpdateIntervalInSec(uint16_t period)
   }
 }
 
-void WN_Core::invertPolarity(bool should_invert)
+void WN_Core::invertVanePolarity(bool should_invert)
 {
   _invert_polarity = should_invert;
 }
@@ -156,6 +156,7 @@ void WN_Core::loop()
 
     // convert pulses to speed and reset the pulse counter for the next counting window
     float instant_wind_speed = pulsesToSpeedUnitInUse(speed_pulse_count);
+
     speed_pulse_count = 0;
 
     wn_instant_wind_report_t instant_wind_report = {speed : instant_wind_speed, dir : raw_report.dir_avg};
@@ -198,7 +199,7 @@ void WN_Core::onInstantWindUpdate(void (*cb)(wn_instant_wind_report_t instant_re
 }
 
 // set the callback function that will be called when new average wind update is available
-void WN_Core::onAvgWindUpdate(void (*cb)(wn_wind_report_t report))
+void WN_Core::onNewWindReport(void (*cb)(wn_wind_report_t report))
 {
   avgWindCb = cb;
 }
@@ -234,7 +235,7 @@ void WN_Core::setSpeedUnit(wn_wind_unit_t unit)
   _unit_in_use = unit;
 }
 
-float WN_Core::pulsesToSpeedUnitInUse(uint32_t pulses)
+float WN_Core::pulsesToSpeedUnitInUse(float pulses)
 {
 
   float speed_ms = pulses * _HZ_to_ms / (SAMPLING_WINDOW_TICKS / TICK_HZ);

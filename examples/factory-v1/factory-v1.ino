@@ -25,7 +25,7 @@ void instantWindCallback(wn_instant_wind_report_t instant_report)
 }
 
 // called every minute, gives wind average, min and max over last 10 minutes
-void avgWindCallback(wn_wind_report_t report)
+void windReportCallback(wn_wind_report_t report)
 {
   SerialOutput.print("WNA,");
   SerialOutput.print(report.avg_speed, 1);
@@ -50,15 +50,15 @@ void setup()
   }
 
   // set 1 minute as update interval
-  if (!Anemometer.setUpdateIntervalInSec(60))
+  if (!Anemometer.setReportingIntervalInSec(60))
   {
-    SerialDebug.print("Incorrect update period value");
+    SerialDebug.print("Incorrect reporting interval value");
   }
   
-  Anemometer.invertPolarity(false);  // change to true if you notice north and south are inverted
+  Anemometer.invertVanePolarity(false);  // change to true if you notice north and south are inverted
   Anemometer.setSpeedUnit(UNIT_KPH); // UNIT_MS, UNIT_KN, UNIT_KPH or UNIT_MPH
-  Anemometer.onInstantWindUpdate(&instantWindCallback);
-  Anemometer.onAvgWindUpdate(&avgWindCallback);
+  Anemometer.onInstantWindUpdate(&instantWindCallback); // set the callback for instant wind
+  Anemometer.onNewWindReport(&windReportCallback); // set the callback for average wind
 
   Anemometer.begin();
 }

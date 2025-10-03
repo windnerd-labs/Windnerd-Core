@@ -45,14 +45,14 @@ public:
   void triggerInstantWindCb(wn_instant_wind_report_t &instant_report);
 
   // set a callback function that will be triggered every 1 minute for average wind update, the
-  void onAvgWindUpdate(void (*cb)(wn_wind_report_t report));
+  void onNewWindReport(void (*cb)(wn_wind_report_t report));
   void triggerAvgWindCb(wn_wind_report_t &report);
 
   void begin();
   bool setAveragingPeriodInSec(uint16_t period);
-  bool setUpdateIntervalInSec(uint16_t period);
+  bool setReportingIntervalInSec(uint16_t period);
   void setSpeedUnit(wn_wind_unit_t unit);
-  void invertPolarity(bool should_invert);
+  void invertVanePolarity(bool should_invert);
 
 private:
   float _HZ_to_ms;
@@ -73,6 +73,6 @@ private:
   void (*instantWindCb)(wn_instant_wind_report_t instant_report) = nullptr;
   void (*avgWindCb)(wn_wind_report_t report) = nullptr;
   wn_wind_report_t formatRawReport(wn_raw_wind_report_t &raw_report);
-  float pulsesToSpeedUnitInUse(uint32_t pulses);
+  float pulsesToSpeedUnitInUse(float pulses);
   void signalIfNorth(uint16_t angle);
 };

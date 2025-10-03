@@ -6,12 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-
 #pragma once
 #include "Arduino.h"
 
-
-#define ROLLING_BUFFER_LENGTH 200  // 10 minutes
+#define ROLLING_BUFFER_LENGTH 200 // 10 minutes
 
 typedef struct
 {
@@ -20,9 +18,8 @@ typedef struct
   bool valid = true;
 } wn_raw_wind_sample_t;
 
-
-
-class WN_ROLLINGBUFFER {
+class WN_ROLLINGBUFFER
+{
 
 public:
   WN_ROLLINGBUFFER();

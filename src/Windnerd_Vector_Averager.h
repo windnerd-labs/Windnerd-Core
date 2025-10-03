@@ -11,14 +11,14 @@
 
 typedef struct
 {
-  uint32_t pulses_avg = 0;
+  float pulses_avg = 0;
   uint16_t dir_avg = 0;
   uint32_t pulses_max = 0;
   uint32_t pulses_min = 0;
 } wn_raw_wind_report_t;
 
-
-class WN_VECTOR_AVERAGER {
+class WN_VECTOR_AVERAGER
+{
 
 public:
   WN_VECTOR_AVERAGER();

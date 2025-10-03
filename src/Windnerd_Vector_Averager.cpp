@@ -8,17 +8,17 @@
 
 #include "Windnerd_Vector_Averager.h"
 
-
- WN_VECTOR_AVERAGER::WN_VECTOR_AVERAGER(){
-
+WN_VECTOR_AVERAGER::WN_VECTOR_AVERAGER()
+{
 }
 
-void WN_VECTOR_AVERAGER::accumulate(wn_raw_wind_sample_t sample) {
+void WN_VECTOR_AVERAGER::accumulate(wn_raw_wind_sample_t sample)
+{
   accumulate(sample.pulses, sample.dir);
 }
 
-
-void WN_VECTOR_AVERAGER::accumulate(uint32_t pulses, uint16_t dir) {
+void WN_VECTOR_AVERAGER::accumulate(uint32_t pulses, uint16_t dir)
+{
   // Convert dir (degrees) into radians
   float rad = dir * (M_PI / 180.0f);
 
@@ -28,14 +28,16 @@ void WN_VECTOR_AVERAGER::accumulate(uint32_t pulses, uint16_t dir) {
 
   // Track counts and min/max
   cnt++;
-  if (pulses > wind_max) wind_max = pulses;
-  if (pulses < wind_min) wind_min = pulses;
+  if (pulses > wind_max)
+    wind_max = pulses;
+  if (pulses < wind_min)
+    wind_min = pulses;
 }
 
-
-
-void WN_VECTOR_AVERAGER::computeReport(wn_raw_wind_report_t* report) {
-  if (cnt == 0) {
+void WN_VECTOR_AVERAGER::computeReport(wn_raw_wind_report_t *report)
+{
+  if (cnt == 0)
+  {
     return;
   }
 
@@ -43,12 +45,12 @@ void WN_VECTOR_AVERAGER::computeReport(wn_raw_wind_report_t* report) {
   float avgX = x / cnt;
   float avgY = y / cnt;
   float dir = atan2f(avgY, avgX) * 180.0f / M_PI;
-  if (dir < 0) dir += 360.0f;
+  if (dir < 0)
+  {
+    dir += 360.0f;
+  }
 
-  // Average pulses magnitude
-  float mag = sqrtf(avgX * avgX + avgY * avgY);
-
-  report->pulses_avg = (uint32_t)(mag + 0.5f);
+  report->pulses_avg = sqrtf(avgX * avgX + avgY * avgY);
   report->dir_avg = (uint16_t)(dir + 0.5f);
   report->pulses_max = wind_max;
   report->pulses_min = wind_min;
@@ -56,4 +58,3 @@ void WN_VECTOR_AVERAGER::computeReport(wn_raw_wind_report_t* report) {
   y = 0;
   cnt = 0;
 }
-
