@@ -7,6 +7,7 @@ This document describes how to integrate the WindNerd Core with the Luat Air780E
 The `4g-air780e` example demonstrates how to:
 - Wake up the 4G board every 15 minutes
 - Transmit wind speed and wind direction data via 4G
+- Send data to Windguru API for online wind monitoring
 - Minimize power consumption by putting the 4G module to sleep between transmissions
 
 ## Hardware Connection
@@ -41,6 +42,27 @@ WindNerd Core          Luat Air780E
 ```
 
 ## Configuration
+
+### Windguru Station Setup
+
+Before using the firmware, you need to register your station on Windguru:
+
+1. **Create a Windguru Account**: Visit [Windguru Stations](https://stations.windguru.cz/) and create an account
+2. **Register Your Station**: Add a new weather station and obtain:
+   - **Station UID**: Your unique station identifier
+   - **Station Password**: Authentication password for API access
+3. **Configure the Firmware**: Edit the configuration section in the sketch:
+
+```cpp
+#define WINDGURU_STATION_UID "YOUR_STATION_UID"    // Replace with your station UID
+#define WINDGURU_STATION_PASSWORD "YOUR_PASSWORD"  // Replace with your station password
+```
+
+**Example:**
+```cpp
+#define WINDGURU_STATION_UID "mystation123"
+#define WINDGURU_STATION_PASSWORD "MySecurePass456"
+```
 
 ### 4G Module Settings
 
@@ -84,28 +106,39 @@ Every 15 minutes, the system:
 
 2. **Data Transmission Phase**
    - Checks network registration
-   - Formats wind data as: `WIND,<speed>,<direction>,<timestamp>`
-   - Transmits data via AT commands
-   - Example: `WIND,12.5,270,123456`
+   - Generates authentication hash (MD5) using salt, UID, and password
+   - Converts wind speed from km/h to knots (Windguru requirement)
+   - Formats Windguru API URL with wind data
+   - Sends HTTP GET request to: `http://www.windguru.cz/upload/api.php`
+   - Example URL: `http://www.windguru.cz/upload/api.php?uid=mystation&salt=123456&hash=abc123&wind_avg=12.5&wind_direction=270`
 
 3. **Sleep Phase**
+   - Terminates HTTP connection
    - Sends sleep command: `AT+CSCLK=2`
    - Powers down the module (1200ms HIGH pulse)
    - Returns to low-power mode
 
 ### Wind Data Format
 
-The transmitted data includes:
-- **Speed**: Wind speed in km/h (configurable via `setSpeedUnit()`)
-- **Direction**: Wind direction in degrees (0-359)
-- **Timestamp**: Milliseconds since boot
+The data is transmitted to Windguru API using the following format:
 
-Example transmission:
+**Windguru API Parameters:**
+- **uid**: Station unique identifier
+- **salt**: Random string (timestamp) for security
+- **hash**: MD5 hash of `salt + uid + password` for authentication
+- **wind_avg**: Average wind speed in **knots** (automatically converted from km/h)
+- **wind_direction**: Wind direction in degrees (0-359, where 0 = North)
+
+**Conversion Notes:**
+- The firmware automatically converts wind speed from km/h to knots (1 km/h = 0.539957 knots)
+- Wind direction is transmitted directly in degrees as measured by the sensor
+
+**Example Transmission:**
 ```
-WIND,15.3,45,901234
+URL: http://www.windguru.cz/upload/api.php?uid=mystation&salt=1234567890&hash=c9441d30280f4f6f4946fe2b2d360df5&wind_avg=6.7&wind_direction=45
 ```
 
-This means: 15.3 km/h wind from 45° (northeast) at timestamp 901234ms.
+This means: 6.7 knots (12.4 km/h) wind from 45° (northeast).
 
 ## AT Commands Used
 
@@ -116,9 +149,46 @@ The example uses standard AT commands compatible with the Air780E:
 | `AT` | Check module status | `OK` |
 | `AT+CREG?` | Check network registration | `+CREG:` |
 | `AT+CSCLK=2` | Enable auto sleep mode | `OK` |
-| `AT+CIPSEND=<len>` | Send data | `>` prompt |
+| `AT+HTTPINIT` | Initialize HTTP service | `OK` |
+| `AT+HTTPPARA="URL","..."` | Set HTTP URL parameter | `OK` |
+| `AT+HTTPACTION=0` | Execute HTTP GET request | `OK` |
+| `AT+HTTPREAD` | Read HTTP response | `OK` |
+| `AT+HTTPTERM` | Terminate HTTP service | `OK` |
 
 ## Customization
+
+### Windguru Integration Options
+
+**Change Station Credentials:**
+```cpp
+#define WINDGURU_STATION_UID "newstation"
+#define WINDGURU_STATION_PASSWORD "newpassword"
+```
+
+**Add Additional Weather Parameters:**
+
+Windguru API supports additional optional parameters. You can extend the URL in `transmitWindData()`:
+
+```cpp
+// Add temperature (in Celsius)
+float temperature = 25.5;
+
+// Add wind gust (maximum wind speed in knots)
+float windGustKnots = kphToKnots(latestWind.maxSpeed);
+
+// Build extended URL
+snprintf(urlBuffer, sizeof(urlBuffer),
+         "http://www.windguru.cz/upload/api.php?uid=%s&salt=%s&hash=%s&wind_avg=%.1f&wind_max=%.1f&wind_direction=%d&temperature=%.1f",
+         WINDGURU_STATION_UID, salt, md5Output, windSpeedKnots, windGustKnots, latestWind.direction, temperature);
+```
+
+**Supported Optional Parameters:**
+- `wind_max`: Maximum wind speed (knots)
+- `wind_min`: Minimum wind speed (knots)
+- `temperature`: Air temperature (°C)
+- `rh`: Relative humidity (%)
+- `mslp`: Mean sea level pressure (hPa)
+- `precip`: Precipitation (mm)
 
 ### Change Transmission Protocol
 
@@ -220,11 +290,56 @@ If `AT+CREG?` doesn't show network registration:
 
 If data transmission fails:
 1. Check network connectivity
-2. Verify the AT command sequence for your data protocol
-3. Enable debug serial output to see detailed logs
-4. Test with simple AT commands first
+2. Verify Windguru station credentials (UID and password)
+3. Check that the URL is properly formatted (enable debug serial output)
+4. Verify the HTTP commands are working with simple AT+HTTPINIT test
+5. Check Windguru station status on the website
+6. Ensure the 4G module has internet connectivity (test with AT+CIPSTART)
 
 ## Examples
+
+### Windguru Integration (Default)
+
+The default example transmits wind data to Windguru API:
+
+```cpp
+void transmitWindData()
+{
+  // Wake up module
+  wakeup4GModule();
+  
+  // Check module status
+  if (!sendATCommand("AT", "OK", AIR780E_COMMAND_TIMEOUT_MS)) {
+    return;
+  }
+  
+  // Generate authentication
+  char salt[32];
+  snprintf(salt, sizeof(salt), "%lu", millis());
+  
+  char hashInput[256];
+  snprintf(hashInput, sizeof(hashInput), "%s%s%s", 
+           salt, WINDGURU_STATION_UID, WINDGURU_STATION_PASSWORD);
+  
+  char md5Output[33];
+  md5Hash(hashInput, md5Output);
+  
+  // Convert speed to knots
+  float windSpeedKnots = kphToKnots(latestWind.speed);
+  
+  // Build Windguru URL
+  char urlBuffer[384];
+  snprintf(urlBuffer, sizeof(urlBuffer),
+           "http://www.windguru.cz/upload/api.php?uid=%s&salt=%s&hash=%s&wind_avg=%.1f&wind_direction=%d",
+           WINDGURU_STATION_UID, salt, md5Output, windSpeedKnots, latestWind.direction);
+  
+  // Send HTTP GET request
+  sendATCommand("AT+HTTPINIT", "OK", AIR780E_COMMAND_TIMEOUT_MS);
+  // ... (continue with HTTP commands)
+  
+  sleep4GModule();
+}
+```
 
 ### Basic Wind Data Logger
 
@@ -263,6 +378,8 @@ void transmitWindData()
 
 ## References
 
+- [Windguru Stations](https://stations.windguru.cz/) - Register your station
+- [Windguru API Documentation](https://stations.windguru.cz/upload_api.php) - API specification
 - [Luat Air780E Documentation](https://doc.openluat.com/)
 - [AT Command Set](https://doc.openluat.com/wiki/37?wiki_page_id=4653)
 - [WindNerd Core Documentation](../docs/PROGRAM.md)
