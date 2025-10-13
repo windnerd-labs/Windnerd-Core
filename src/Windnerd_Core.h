@@ -67,6 +67,8 @@ private:
   wn_wind_unit_t _unit_in_use = UNIT_MS;
   bool _invert_polarity = false;
 
+  long last_sampling_window_millis = 0;
+
   WN_ROLLINGBUFFER RollingBuffer;
   WN_VECTOR_AVERAGER VaneAverager;
 

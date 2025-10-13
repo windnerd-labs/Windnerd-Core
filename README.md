@@ -4,7 +4,7 @@
 
 ## Intro
 
-The WindNerd Core is a **full magnetic** sensor board designed to fit inside the WindNerd [**3D-printed-anemometer**](https://github.com/windnerd-labs/Anemometer-3D-files).
+The WindNerd Core is a **full magnetic** sensor board designed to fit inside the [**WindNerd 3D-printed-anemometer**](https://github.com/windnerd-labs/Anemometer-3D-files).
 
 It is [**available as a kit**](https://windnerd.net/en/shop), which includes the board and essential parts like magnets and bearings.
 

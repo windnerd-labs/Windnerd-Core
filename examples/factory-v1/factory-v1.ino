@@ -24,7 +24,7 @@ void instantWindCallback(wn_instant_wind_report_t instant_report)
   SerialOutput.println(instant_report.dir);
 }
 
-// called every minute, gives wind average, min and max over last 10 minutes
+// called at interval defined by setReportingIntervalInSec(), gives wind average, min and max over period defined by setAveragingPeriodInSec()
 void windReportCallback(wn_wind_report_t report)
 {
   SerialOutput.print("WNA,");
@@ -49,7 +49,7 @@ void setup()
     SerialDebug.print("Incorrect averaging period value");
   }
 
-  // set 1 minute as update interval
+  // set 1 minute as reporting interval
   if (!Anemometer.setReportingIntervalInSec(60))
   {
     SerialDebug.print("Incorrect reporting interval value");

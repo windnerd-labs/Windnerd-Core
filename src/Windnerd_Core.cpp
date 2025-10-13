@@ -136,8 +136,10 @@ void WN_Core::loop()
 
   if (_invert_polarity)
   {
-    angle = (angle + 180) % 360;
+    angle = angle + 180;
   }
+
+  angle  = angle % 360; // cap value from 0 to 359
 
   signalIfNorth(angle);
 
@@ -149,24 +151,35 @@ void WN_Core::loop()
   if (ticks_cnt % SAMPLING_WINDOW_TICKS == 0)
   { // counting window has elapsed
 
-    // we average the wind direction during that time and store the data point in a circular/rolling buffer
-    wn_raw_wind_report_t raw_report;
-    VaneAverager.computeReport(&raw_report);
-    RollingBuffer.addSample(speed_pulse_count, raw_report.dir_avg);
+    // check timing, drop the sample if one or more ticks were missed (would be likely caused by a blocking delay in user program loop)
+    if (millis() - last_sampling_window_millis < SAMPLE_DURATION * 1000 + 1000 / TICK_HZ)
+    {
+      // we average the wind direction during that time and store the data point in a circular/rolling buffer
+      wn_raw_wind_report_t raw_report;
+      VaneAverager.computeReport(&raw_report);
+      RollingBuffer.addSample(speed_pulse_count, raw_report.dir_avg);
 
-    // convert pulses to speed and reset the pulse counter for the next counting window
-    float instant_wind_speed = pulsesToSpeedUnitInUse(speed_pulse_count);
+      // convert pulses to speed
+      float instant_wind_speed = pulsesToSpeedUnitInUse(speed_pulse_count);
 
-    speed_pulse_count = 0;
+      // reset pulse counter before triggering callback since we don't know its execution time
+      speed_pulse_count = 0;
+      last_sampling_window_millis = millis();
 
-    wn_instant_wind_report_t instant_wind_report = {speed : instant_wind_speed, dir : raw_report.dir_avg};
+      wn_instant_wind_report_t instant_wind_report = {speed : instant_wind_speed, dir : raw_report.dir_avg};
 
-    // trigger the instant wind callback set by user
-    triggerInstantWindCb(instant_wind_report);
+      // trigger the instant wind callback set by user
+      triggerInstantWindCb(instant_wind_report);
+    }
+    else
+    {
+      speed_pulse_count = 0;
+      last_sampling_window_millis = millis();
+    }
   }
 
   if (ticks_cnt % (_wind_update_period_sec * TICK_HZ) == 0)
-  { // time between wind avg updates has elapsed
+  { // time interval between wind avg updates has elapsed
 
     uint16_t samples_to_average = _wind_average_period_sec / (SAMPLING_WINDOW_TICKS / TICK_HZ); // how many samples should be read depends on the average period set
 
@@ -186,7 +199,6 @@ void WN_Core::loop()
     periodAverager.computeReport(&avg_raw_wind_report);
 
     // convert them to speed and trigger the averaging wind callback set by user
-
     wn_wind_report_t report = formatRawReport(avg_raw_wind_report);
     triggerAvgWindCb(report);
   }
