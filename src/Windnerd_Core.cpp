@@ -210,7 +210,7 @@ void WN_Core::onInstantWindUpdate(void (*cb)(wn_instant_wind_report_t instant_re
   instantWindCb = cb;
 }
 
-// set the callback function that will be called when new average wind update is available
+// set the callback function that will be called when new average wind report is available
 void WN_Core::onNewWindReport(void (*cb)(wn_wind_report_t report))
 {
   avgWindCb = cb;
