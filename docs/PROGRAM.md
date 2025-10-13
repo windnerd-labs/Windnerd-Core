@@ -64,7 +64,7 @@ To install the library manually:
 2. **Set the upload method:**
    - Go to **Tools → Upload Method**.
    - For STM32G0 series, choose:
-     - **STM32CubeProgrammer (SWD)** if you are using an ST-Link.
+     - **STM32CubeProgrammer (SWD)** if you are using an ST-Link. Connect pins CLK,DIO,RST and GND to your ST-link dongle. Power supply can either be provided through VCC or 3.3V (supplied by the ST-Link) but do not connect both at same time.
      - **Serial** if your board has a bootloader for UART flashing (on RX1 and TX1). This mode needs to be enabled on the board by placing a jumper between pin headers named CLK and 3.3 and repowering the board.  
 
 4. **Upload a sketch** as usual using the **Upload** button.
