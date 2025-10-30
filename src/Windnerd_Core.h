@@ -53,6 +53,10 @@ public:
   bool setReportingIntervalInSec(uint16_t period);
   void setSpeedUnit(wn_wind_unit_t unit);
   void invertVanePolarity(bool should_invert);
+  void enableLowPowerMode();
+  void disableLowPowerMode();
+  bool isLowPowerMode();
+
 
 private:
   float _HZ_to_ms;

@@ -54,11 +54,11 @@ void setup()
   {
     SerialDebug.print("Incorrect reporting interval value");
   }
-  
-  Anemometer.invertVanePolarity(false);  // change to true if you notice north and south are inverted
-  Anemometer.setSpeedUnit(UNIT_KPH); // UNIT_MS, UNIT_KN, UNIT_KPH or UNIT_MPH
+
+  Anemometer.invertVanePolarity(false);                 // change to true if you notice north and south are inverted
+  Anemometer.setSpeedUnit(UNIT_KPH);                    // UNIT_MS, UNIT_KN, UNIT_KPH or UNIT_MPH
   Anemometer.onInstantWindUpdate(&instantWindCallback); // set the callback for instant wind
-  Anemometer.onNewWindReport(&windReportCallback); // set the callback for average wind
+  Anemometer.onNewWindReport(&windReportCallback);      // set the callback for average wind
 
   Anemometer.begin();
 }
@@ -67,10 +67,16 @@ void loop()
 {
   Anemometer.loop();
 
+  // 10 minutes after start-up we switch to low power mode|
+  // on board diagnostic LEDs are not active anymore but power consumption is reduced from 0.9mA to 0.6mA
+  if (!Anemometer.isLowPowerMode() && millis() > 20000)
+  {
+    SerialDebug.println("Switch to low power mode");
+    Anemometer.enableLowPowerMode();
+  }
+
   // put the MCU to sleep, the WindNerd Core library uses a timer interrupt to wake it up automatically when needed
-  HAL_SuspendTick();
   HAL_PWR_EnterSLEEPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
-  HAL_ResumeTick();
 }
 
 // this is an override to set the SYS clock at 8MHz in order to reduce power consumption

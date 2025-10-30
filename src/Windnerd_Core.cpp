@@ -32,12 +32,17 @@ HardwareTimer *tickerTimer = nullptr;
 #define SAMPLING_WINDOW_TICKS 30
 #define SAMPLE_DURATION (SAMPLING_WINDOW_TICKS / TICK_HZ)
 
+// in low power mode, measure vane angle every 500 ms
+#define LOW_POWER_VANE_TICKS 5
+
 static volatile bool wn_ticker = false;         // flag to indicate that a tick interrupt has happened
 static volatile uint32_t speed_pulse_count = 0; // to be incremented by rising edge interrupts on speed pulse input
+static volatile bool low_power_mode = false;
 
 void onSpeedPulseISR()
 {
-  digitalWrite(SPEED_LED, HIGH); // signal pulse by turning the speed LED ON, it will be turned OFF during the next tick
+  if (!low_power_mode)
+    digitalWrite(SPEED_LED, HIGH); // signal pulse by turning the speed LED ON, it will be turned OFF during the next tick
   speed_pulse_count++;
 }
 
@@ -75,6 +80,7 @@ void WN_Core::begin()
 
   pinMode(_speed_input_pin, INPUT);
   attachInterrupt(digitalPinToInterrupt(SPEED_INPUT), onSpeedPulseISR, RISING);
+  last_sampling_window_millis = millis();
 }
 
 // set the averaging period for average wind report
@@ -113,7 +119,8 @@ void WN_Core::invertVanePolarity(bool should_invert)
 // turn on North led when vane is roughly north
 void WN_Core::signalIfNorth(uint16_t angle)
 {
-  if (angle > 355 || angle < 5)
+
+  if (!low_power_mode && (angle > 355 || angle < 5))
   {
     digitalWrite(_north_led_pin, HIGH);
   }
@@ -132,19 +139,23 @@ void WN_Core::loop()
 
   ticks_cnt++;
 
-  uint16_t angle = wn_read_then_make_angle_sensor_sleep();
-
-  if (_invert_polarity)
+  if (!low_power_mode || ticks_cnt % LOW_POWER_VANE_TICKS == 0)
   {
-    angle = angle + 180;
+
+    uint16_t angle = wn_read_then_make_angle_sensor_sleep();
+
+    if (_invert_polarity)
+    {
+      angle = angle + 180;
+    }
+
+    angle = angle % 360; // cap value from 0 to 359
+    signalIfNorth(angle);
+
+    // accumulate with an arbitrary magnitude, we are interested only in direction avg
+    VaneAverager.accumulate((uint32_t)1, angle);
   }
 
-  angle  = angle % 360; // cap value from 0 to 359
-
-  signalIfNorth(angle);
-
-  // accumulate with an arbitrary magnitude, we are interested only in direction avg
-  VaneAverager.accumulate((uint32_t)1, angle);
   // reset the speed led for flash effect
   digitalWrite(_speed_led_pin, LOW);
 
@@ -264,4 +275,19 @@ float WN_Core::pulsesToSpeedUnitInUse(float pulses)
   default:
     return speed_ms; // fallback to m/s
   }
+}
+
+void WN_Core::enableLowPowerMode()
+{
+  low_power_mode = true;
+}
+
+void WN_Core::disableLowPowerMode()
+{
+  low_power_mode = false;
+}
+
+bool WN_Core::isLowPowerMode()
+{
+  return low_power_mode;
 }

@@ -23,7 +23,7 @@ For development, an ST-Link V2 (or compatible) dongle is recommended. However, a
 
 The board is shipped with factory firmware that outputs instant wind values and averaged wind values over a serial connection.
 
-The average power consumption is only **1.5mA** (3.3V or 5V).
+The average power consumption is only **0.6mA** (3.3V or 5V).
 
 It can be connected to a computer using a **USB-serial-TTL adapter** or to any MCU board that provides a **UART serial interface**.
 
