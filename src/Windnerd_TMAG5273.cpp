@@ -16,6 +16,7 @@
 #define DEVICE_CONFIG_2 0x01
 #define SENSOR_CONFIG_1 0x02
 #define SENSOR_CONFIG_2 0x03
+#define INT_CONFIG_1 0x08
 #define ANGLE_RESULT_MSB 0x19
 
 // values
@@ -50,7 +51,6 @@ void wn_read_angle_sensor_register(uint8_t reg, uint8_t *data, size_t length)
   {
     data[i] = Wire.read();
   }
-  // Wire.endTransmission();
 }
 
 void wn_init_angle_sensor()
@@ -69,6 +69,8 @@ void wn_init_angle_sensor()
 
   wn_write_angle_sensor_register(SENSOR_CONFIG_2, ANGLE_FROM_X_Z);
   wn_write_angle_sensor_register(DEVICE_CONFIG_1, SAMPLING_8X);
+  wn_write_angle_sensor_register(INT_CONFIG_1, 1);
+
   wn_write_angle_sensor_register(DEVICE_CONFIG_2, OPERATING_MODE_SLEEP);
 }
 
@@ -77,15 +79,12 @@ uint16_t wn_read_then_make_angle_sensor_sleep()
   uint8_t rx[1];
   wn_read_angle_sensor_register(DEVICE_CONFIG_2, rx, 1); // wake up the sensor with a read operation
   delay(1);
-
   wn_write_angle_sensor_register(DEVICE_CONFIG_2, OPERATING_MODE_MEASURE);
   delay(10);
 
   uint8_t angle_result[2];
   wn_read_angle_sensor_register(ANGLE_RESULT_MSB, angle_result, 2);
-  wn_write_angle_sensor_register(DEVICE_CONFIG_2, OPERATING_MODE_STANDBY);
 
-  delay(20); // necessary, otherwise the TMAG doesn't effectively go to sleep if the wake up was too short, this behavior is not documented by TI afaik
   wn_write_angle_sensor_register(DEVICE_CONFIG_2, OPERATING_MODE_SLEEP);
 
   uint16_t raw_angle = (angle_result[0] << 8) + angle_result[1]; // combine 2 bytes as a 16 bits variable
