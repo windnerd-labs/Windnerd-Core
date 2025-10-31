@@ -12,10 +12,10 @@ WN_ROLLINGBUFFER::WN_ROLLINGBUFFER()
 {
 }
 
-void WN_ROLLINGBUFFER::addSample(uint16_t pulses, uint16_t dir)
+void WN_ROLLINGBUFFER::addRawSample(wn_raw_wind_sample_t& raw_sample)
 {
   head = (head + 1) % ROLLING_BUFFER_LENGTH;
-  samples[head] = {pulses, dir, true};
+  samples[head] = raw_sample;
   if (count < ROLLING_BUFFER_LENGTH)
   {
     count++;

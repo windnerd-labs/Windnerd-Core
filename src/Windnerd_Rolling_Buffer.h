@@ -9,7 +9,7 @@
 #pragma once
 #include "Arduino.h"
 
-#define ROLLING_BUFFER_LENGTH 200 // 10 minutes
+#define ROLLING_BUFFER_LENGTH 400 // 20 minutes
 
 typedef struct
 {
@@ -24,7 +24,7 @@ class WN_ROLLINGBUFFER
 public:
   WN_ROLLINGBUFFER();
 
-  void addSample(uint16_t pulses, uint16_t dir);
+  void addRawSample(wn_raw_wind_sample_t &raw_sample);
   wn_raw_wind_sample_t get(size_t index);
 
 private:

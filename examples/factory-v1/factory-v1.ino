@@ -19,12 +19,12 @@ HardwareSerial SerialOutput(USART2); // TX2 on WindNerd Core board (yellow wire)
 HardwareSerial SerialDebug(USART1);  // RX1 and TX1 on WindNerd Core board (headers connector)
 
 // called every 3 seconds, gives instant wind speed + direction
-void instantWindCallback(wn_instant_wind_report_t instant_report)
+void instantWindCallback(wn_instant_wind_sample_t sample)
 {
   SerialOutput.print("WNI,");
-  SerialOutput.print(instant_report.speed, 1);
+  SerialOutput.print(sample.speed, 1);
   SerialOutput.print(",");
-  SerialOutput.println(instant_report.dir);
+  SerialOutput.println(sample.dir);
 }
 
 // called at interval defined by setReportingIntervalInSec(), gives wind average, min and max over period defined by setAveragingPeriodInSec()
