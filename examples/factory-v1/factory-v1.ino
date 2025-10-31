@@ -10,6 +10,9 @@
 #include "Windnerd_Core.h"
 #include "stm32g0xx_hal.h" // necessary to change clock settings
 
+#define TIME_BEFORE_LOW_POWER (10UL * 60UL * 1000UL)
+
+
 WN_Core Anemometer;
 
 HardwareSerial SerialOutput(USART2); // TX2 on WindNerd Core board (yellow wire)
@@ -69,7 +72,7 @@ void loop()
 
   // 10 minutes after start-up we switch to low power mode|
   // on board diagnostic LEDs are not active anymore but power consumption is reduced from 0.9mA to 0.6mA
-  if (!Anemometer.isLowPowerMode() && millis() > 20000)
+  if (!Anemometer.isLowPowerMode() && millis() > TIME_BEFORE_LOW_POWER)
   {
     SerialDebug.println("Switch to low power mode");
     Anemometer.enableLowPowerMode();
