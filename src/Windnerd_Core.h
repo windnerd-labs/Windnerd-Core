@@ -15,7 +15,7 @@ typedef struct
 {
   float speed = 0;
   uint16_t dir = 0;
-} wn_instant_wind_report_t;
+} wn_instant_wind_sample_t;
 
 typedef struct
 {
@@ -41,8 +41,8 @@ public:
 
   void loop(void);
   // set a callback function that will be triggered  every 3 sec for instant wind update
-  void onInstantWindUpdate(void (*cb)(wn_instant_wind_report_t instant_report));
-  void triggerInstantWindCb(wn_instant_wind_report_t &instant_report);
+  void onInstantWindUpdate(void (*cb)(wn_instant_wind_sample_t instant_report));
+  void triggerInstantWindCb(wn_instant_wind_sample_t &instant_report);
 
   // set a callback function that will be triggered every 1 minute for average wind update, the
   void onNewWindReport(void (*cb)(wn_wind_report_t report));
@@ -56,7 +56,9 @@ public:
   void enableLowPowerMode();
   void disableLowPowerMode();
   bool isLowPowerMode();
-
+  wn_wind_report_t computeReportForRecentPeriodInSec(uint16_t period);
+  wn_wind_report_t computeReportForPeriodInSecIndexedFromLast(uint16_t period, uint16_t index);
+  wn_instant_wind_sample_t getSampleIndexedFromLast(uint16_t index);
 
 private:
   float _HZ_to_ms;
@@ -76,9 +78,11 @@ private:
   WN_ROLLINGBUFFER RollingBuffer;
   WN_VECTOR_AVERAGER VaneAverager;
 
-  void (*instantWindCb)(wn_instant_wind_report_t instant_report) = nullptr;
+  void (*instantWindCb)(wn_instant_wind_sample_t instant_report) = nullptr;
   void (*avgWindCb)(wn_wind_report_t report) = nullptr;
   wn_wind_report_t formatRawReport(wn_raw_wind_report_t &raw_report);
+  wn_instant_wind_sample_t formatRawSample(wn_raw_wind_sample_t &raw_sample);
+
   float pulsesToSpeedUnitInUse(float pulses);
   void signalIfNorth(uint16_t angle);
 };

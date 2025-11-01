@@ -25,7 +25,7 @@ public:
 
   void accumulate(uint32_t pulses, uint16_t dir);
   void accumulate(wn_raw_wind_sample_t sample);
-  void computeReport(wn_raw_wind_report_t *report);
+  void computeReportFromAccumulatedValues(wn_raw_wind_report_t *report);
 
 private:
   float x = 0;

@@ -166,21 +166,19 @@ void WN_Core::loop()
     if (millis() - last_sampling_window_millis < SAMPLE_DURATION * 1000 + 1000 / TICK_HZ)
     {
       // we average the wind direction during that time and store the data point in a circular/rolling buffer
-      wn_raw_wind_report_t raw_report;
-      VaneAverager.computeReport(&raw_report);
-      RollingBuffer.addSample(speed_pulse_count, raw_report.dir_avg);
+      wn_raw_wind_report_t vane_raw_report;
+      VaneAverager.computeReportFromAccumulatedValues(&vane_raw_report);
+      wn_raw_wind_sample_t raw_sample = {speed_pulse_count, vane_raw_report.dir_avg, true};
 
-      // convert pulses to speed
-      float instant_wind_speed = pulsesToSpeedUnitInUse(speed_pulse_count);
-
-      // reset pulse counter before triggering callback since we don't know its execution time
+      // reset pulse counter as soon as sample is recorded
       speed_pulse_count = 0;
       last_sampling_window_millis = millis();
 
-      wn_instant_wind_report_t instant_wind_report = {speed : instant_wind_speed, dir : raw_report.dir_avg};
+      RollingBuffer.addRawSample(raw_sample);
 
+      wn_instant_wind_sample_t instant_wind_sample = formatRawSample(raw_sample);
       // trigger the instant wind callback set by user
-      triggerInstantWindCb(instant_wind_report);
+      triggerInstantWindCb(instant_wind_sample);
     }
     else
     {
@@ -191,32 +189,49 @@ void WN_Core::loop()
 
   if (ticks_cnt % (_wind_update_period_sec * TICK_HZ) == 0)
   { // time interval between wind avg updates has elapsed
-
-    uint16_t samples_to_average = _wind_average_period_sec / (SAMPLING_WINDOW_TICKS / TICK_HZ); // how many samples should be read depends on the average period set
-
-    // read last samples from circular/rolling buffer and accumulate their cartesian coordinates
-    WN_VECTOR_AVERAGER periodAverager;
-    for (uint16_t i = 0; i < samples_to_average; i++)
-    {
-      wn_raw_wind_sample_t sample = RollingBuffer.get(i);
-      if (sample.valid)
-      {
-        periodAverager.accumulate(sample);
-      }
-    }
-
-    // compute 2D averaging, min, max for period
-    wn_raw_wind_report_t avg_raw_wind_report;
-    periodAverager.computeReport(&avg_raw_wind_report);
-
-    // convert them to speed and trigger the averaging wind callback set by user
-    wn_wind_report_t report = formatRawReport(avg_raw_wind_report);
+    wn_wind_report_t report = computeReportForRecentPeriodInSec(_wind_average_period_sec);
     triggerAvgWindCb(report);
   }
 }
 
+wn_wind_report_t WN_Core::computeReportForRecentPeriodInSec(uint16_t period)
+{
+  return computeReportForPeriodInSecIndexedFromLast(period, 0);
+}
+
+wn_instant_wind_sample_t WN_Core::getSampleIndexedFromLast(uint16_t index)
+{
+  wn_raw_wind_sample_t raw_sample = RollingBuffer.get(index);
+  return formatRawSample(raw_sample);
+}
+
+wn_wind_report_t WN_Core::computeReportForPeriodInSecIndexedFromLast(uint16_t period, uint16_t index)
+{
+
+  uint16_t samples_to_average = period / (SAMPLING_WINDOW_TICKS / TICK_HZ); // how many samples should be read depends on the average period set
+  uint16_t shift = (index * period) / (SAMPLING_WINDOW_TICKS / TICK_HZ);
+  // read last samples from circular/rolling buffer and accumulate their cartesian coordinates
+  WN_VECTOR_AVERAGER periodAverager;
+  for (uint16_t i = 0 + shift; i < samples_to_average + shift; i++)
+  {
+    wn_raw_wind_sample_t sample = RollingBuffer.get(i);
+    if (sample.valid)
+    {
+      periodAverager.accumulate(sample);
+    }
+  }
+
+  // compute 2D averaging, min, max for period
+  wn_raw_wind_report_t avg_raw_wind_report;
+  periodAverager.computeReportFromAccumulatedValues(&avg_raw_wind_report);
+
+  // convert them to speed and trigger the averaging wind callback set by user
+  wn_wind_report_t report = formatRawReport(avg_raw_wind_report);
+  return report;
+}
+
 // set the callback function that will be called when new instant wind update is available
-void WN_Core::onInstantWindUpdate(void (*cb)(wn_instant_wind_report_t instant_report))
+void WN_Core::onInstantWindUpdate(void (*cb)(wn_instant_wind_sample_t instant_report))
 {
   instantWindCb = cb;
 }
@@ -227,7 +242,7 @@ void WN_Core::onNewWindReport(void (*cb)(wn_wind_report_t report))
   avgWindCb = cb;
 }
 
-void WN_Core::triggerInstantWindCb(wn_instant_wind_report_t &instant_report)
+void WN_Core::triggerInstantWindCb(wn_instant_wind_sample_t &instant_report)
 {
   if (instantWindCb)
   {
@@ -241,6 +256,15 @@ void WN_Core::triggerAvgWindCb(wn_wind_report_t &report)
   {
     avgWindCb(report); // call only if set
   }
+}
+
+wn_instant_wind_sample_t WN_Core::formatRawSample(wn_raw_wind_sample_t &raw_sample)
+{
+  wn_instant_wind_sample_t sample;
+
+  sample.speed = pulsesToSpeedUnitInUse(raw_sample.pulses);
+  sample.dir = raw_sample.dir;
+  return sample;
 }
 
 wn_wind_report_t WN_Core::formatRawReport(wn_raw_wind_report_t &raw_report)

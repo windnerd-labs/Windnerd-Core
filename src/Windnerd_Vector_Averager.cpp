@@ -34,7 +34,7 @@ void WN_VECTOR_AVERAGER::accumulate(uint32_t pulses, uint16_t dir)
     wind_min = pulses;
 }
 
-void WN_VECTOR_AVERAGER::computeReport(wn_raw_wind_report_t *report)
+void WN_VECTOR_AVERAGER::computeReportFromAccumulatedValues(wn_raw_wind_report_t *report)
 {
   if (cnt == 0)
   {
