@@ -10,20 +10,22 @@
 #include "Windnerd_Core.h"
 #include "stm32g0xx_hal.h" // necessary to change clock settings
 
+#define TIME_BEFORE_LOW_POWER (10UL * 60UL * 1000UL)
+
 WN_Core Anemometer;
 
 HardwareSerial SerialOutput(USART2); // TX2 on WindNerd Core board (yellow wire)
 HardwareSerial SerialDebug(USART1);  // RX1 and TX1 on WindNerd Core board (headers connector)
 
 // called every 3 seconds, gives instant wind speed + direction
-void instantWindCallback(wn_instant_wind_report_t instant_report)
+void instantWindCallback(wn_instant_wind_sample_t sample)
 {
     SerialOutput.print("WNI");
     uint8_t frame[4];
-    frame[0] = (uint8_t)(instant_report.speed + 0.5f); // round the float value into 8 bits integer, 0-255 km/h
-    frame[1] = (instant_report.dir >> 8) & 0xFF;
-    frame[2] = instant_report.dir;
-    frame[3] =  frame[0] ^ frame[1] ^ frame[2];
+    frame[0] = (uint8_t)(sample.speed + 0.5f); // round the float value into 8 bits integer, 0-255 km/h
+    frame[1] = (sample.dir >> 8) & 0xFF;
+    frame[2] = sample.dir;
+    frame[3] = frame[0] ^ frame[1] ^ frame[2];
     SerialOutput.write(frame, sizeof(frame));
 }
 
@@ -46,7 +48,7 @@ void loop()
 
     // 10 minutes after start-up we switch to low power mode|
     // on board diagnostic LEDs are not active anymore but power consumption is reduced from 0.9mA to 0.6mA
-    if (!Anemometer.isLowPowerMode() && millis() > 20000)
+    if (!Anemometer.isLowPowerMode() && millis() > TIME_BEFORE_LOW_POWER)
     {
         SerialDebug.println("Switch to low power mode");
         Anemometer.enableLowPowerMode();
