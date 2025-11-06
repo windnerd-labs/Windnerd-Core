@@ -12,26 +12,25 @@
 
 #define REPORT_INTERVAL_MN 2              // Interval in minutes between uploading wind data via WindNerd Transfer Protocol (https://windnerd.net/docs/wind-transfer-protocol)
 #define WTP_SECRET_KEY "af3ffa12c4937ddf" // Replace with the secret key for your WTP device
+#define NO_SLEEP_AFTER_START_UP_MN 5
+#define SKIP_SLEEP_EVERY 15
 
 WN_Core Anemometer;
 HardwareSerial SerialOutput(USART2); // to serial LTE modem (SIM7670E, SIM7080G, AIR780E...), only TX2 is used, RX2 is not read
 HardwareSerial SerialDebug(USART1);  // TX1 only to serial debug console
 
 unsigned long last_uploading_time = millis();
+unsigned post_cnt = 0;
 
 // steps for uploading wind data
 enum Modem_steps
 {
     START = 0,
     INIT,
-    SET_REPORT_URL,
-    SET_REPORT_HEADERS,
-    SET_REPORT_DATA,
-    SEND_REPORT,
-    SET_SAMPLE_URL,
-    SET_SAMPLE_HEADERS,
-    SET_SAMPLE_DATA,
-    SEND_SAMPLE,
+    SET_URL,
+    SET_HEADERS,
+    SET_DATA,
+    POST,
     TERMINATE,
     GO_SLEEP,
     SLEEP,
@@ -50,61 +49,37 @@ void waitForNextStep(uint16_t time_to_wait)
     modem_step = static_cast<Modem_steps>(modem_step + 1);
 }
 
-// send a char to modem
-void sendToModem(const char *cmd)
+void sendCommandToModem(char *cmd)
 {
     SerialOutput.println(cmd);
     SerialDebug.printf("\r\n>>> Sent to modem: %s\r\n", cmd);
 }
 
-// send a String to modem
-void sendToModem(String cmd)
+void sendTextToModem(char *txt)
 {
-    SerialOutput.println(cmd);
-    SerialDebug.printf("\r\n>>> Sent to modem: %s\r\n", cmd);
+    SerialOutput.print(txt);
+    SerialDebug.printf("\r\n>>> Sent to modem: %s\r\n", txt);
 }
 
 // compose a message to send 1 or more wind reports via WTP
-String composePlainTextReports()
+void composeReportLine(unsigned i, char *buffer)
 {
-
-    String plain_txt = "k=";
-    plain_txt += WTP_SECRET_KEY;
-    plain_txt += ";";
-
-    for (unsigned i = 0; i < REPORT_INTERVAL_MN; i++)
-    {
-        wn_wind_report_t report = Anemometer.computeReportForPeriodInSecIndexedFromLast(60, i);
-        char wa[6], wn[6], wx[6];
-        // fixed length conversions so we can determine payload total length easily
-        dtostrf(report.avg_speed, 4, 1, wa);
-        dtostrf(report.min_speed, 4, 1, wn);
-        dtostrf(report.max_speed, 4, 1, wx);
-        char buffer[32];
-        sprintf(buffer, "wa=%s,wd=%03d,wn=%s,wx=%s;", wa, report.avg_dir, wn, wx);
-        plain_txt += String(buffer);
-    }
-    return plain_txt;
+    wn_wind_report_t report = Anemometer.computeReportForPeriodInSecIndexedFromLast(60, i);
+    char wa[6], wn[6], wx[6];
+    // fixed length conversions so we can determine payload total length easily
+    dtostrf(report.avg_speed, 4, 1, wa);
+    dtostrf(report.min_speed, 4, 1, wn);
+    dtostrf(report.max_speed, 4, 1, wx);
+    sprintf(buffer, "r,wa=%s,wd=%03d,wn=%s,wx=%s;", wa, report.avg_dir, wn, wx);
 }
 
 // compose a message to send aggregated instany wind samples via WTP
-String composePlainTextSamples()
+void composeSampleLine(unsigned i, char *buffer)
 {
-
-    String plain_txt = "k=";
-    plain_txt += WTP_SECRET_KEY;
-    plain_txt += ";";
-
-    for (unsigned i = 0; i < REPORT_INTERVAL_MN * 20; i++)
-    {
-        wn_instant_wind_sample_t sample = Anemometer.getSampleIndexedFromLast(i);
-        char wi[6];
-        dtostrf(sample.speed, 4, 1, wi); // fixed length conversion so we can determine payload total length easily
-        char buffer[32];
-        sprintf(buffer, "wi=%s,wd=%03d;", wi, sample.dir);
-        plain_txt += String(buffer);
-    }
-    return plain_txt;
+    wn_instant_wind_sample_t sample = Anemometer.getSampleIndexedFromLast(i);
+    char wi[6];
+    dtostrf(sample.speed, 4, 1, wi); // fixed length conversion so we can determine payload total length easily
+    sprintf(buffer, "s,wi=%s,wd=%03d;", wi, sample.dir);
 }
 
 // non blocking state machine that sequentially sends AT commands and payloads
@@ -113,7 +88,7 @@ void processModem()
 
     if (modem_step == START)
     {
-        sendToModem("AT");
+        sendCommandToModem("AT");
         waitForNextStep(100);
         return;
     }
@@ -123,85 +98,72 @@ void processModem()
 
         if (modem_step == INIT)
         {
-            sendToModem("AT+HTTPINIT");
+            sendCommandToModem("AT+HTTPINIT");
             waitForNextStep(100);
             return;
         }
 
-        if (modem_step == SET_REPORT_URL)
+        if (modem_step == SET_URL)
         {
-            sendToModem("AT+HTTPPARA=\"URL\",\"http://wtp.windnerd.net/post-report\"");
+            sendCommandToModem("AT+HTTPPARA=\"URL\",\"http://wtp.windnerd.net/post\"");
             waitForNextStep(100);
             return;
         }
 
-        if (modem_step == SET_REPORT_HEADERS)
+        if (modem_step == SET_HEADERS)
         {
             char buffer[32];
-            sprintf(buffer, "AT+HTTPDATA=%d,10000", 19 + 31 * REPORT_INTERVAL_MN); // we calculate the length of the following payload
-            sendToModem(buffer);
+            sprintf(buffer, "AT+HTTPDATA=%d,10000", 19 + 33 * REPORT_INTERVAL_MN + 17 * REPORT_INTERVAL_MN * 20); // we calculate the length of the following payload
+            sendCommandToModem(buffer);
             waitForNextStep(100);
             return;
         }
 
-        if (modem_step == SET_REPORT_DATA)
+        if (modem_step == SET_DATA)
         {
-            String plain_text = composePlainTextReports();
-            SerialDebug.println(plain_text);
-            sendToModem(plain_text);
-            waitForNextStep(100);
+
+            char buffer[64];
+            sprintf(buffer, "k=%s;", WTP_SECRET_KEY);
+            sendTextToModem(buffer);
+
+            for (unsigned i = 0; i < REPORT_INTERVAL_MN; i++)
+            {
+                composeReportLine(i, buffer);
+                sendTextToModem(buffer);
+            }
+
+            for (unsigned i = 0; i < REPORT_INTERVAL_MN * 20; i++)
+            {
+                composeSampleLine(i, buffer);
+                sendTextToModem(buffer);
+            }
+
+            waitForNextStep(200);
             return;
         }
 
-        if (modem_step == SEND_REPORT)
+        if (modem_step == POST)
         {
-            sendToModem("AT+HTTPACTION=1"); // perform POST request
-            waitForNextStep(2000);          // increase the waiting time if you see don't see result like HTTPACTION: 1,200,2 on modem TX
-            return;
-        }
-
-        if (modem_step == SET_SAMPLE_URL)
-        {
-            sendToModem("AT+HTTPPARA=\"URL\",\"http://wtp.windnerd.net/post-sample\"");
-            waitForNextStep(100);
-            return;
-        }
-
-        if (modem_step == SET_SAMPLE_HEADERS)
-        {
-            char buffer[32];
-            sprintf(buffer, "AT+HTTPDATA=%d,10000", 19 + 15 * REPORT_INTERVAL_MN * 20); // we calculate the length of the following payload
-            sendToModem(buffer);
-            waitForNextStep(100);
-            return;
-        }
-
-        if (modem_step == SET_SAMPLE_DATA)
-        {
-            String plain_text = composePlainTextSamples();
-            SerialDebug.println(plain_text);
-            sendToModem(plain_text);
-            waitForNextStep(100);
-            return;
-        }
-
-        if (modem_step == SEND_SAMPLE)
-        {
-            sendToModem("AT+HTTPACTION=1"); // perform POST request
-            waitForNextStep(2000);          // increase the waiting time if you see don't see result like HTTPACTION: 1,200,2 on modem TX
+            sendCommandToModem("AT+HTTPACTION=1"); // perform POST request
+            waitForNextStep(2000);                 // increase the waiting time if you see don't see result like HTTPACTION: 1,200,2 on modem TX
             return;
         }
 
         if (modem_step == TERMINATE)
         {
-            sendToModem("AT+HTTPTERM"); // replace with sendToModem("AT+HTTPREAD=0,200"); if you want to read HTTP response (on modem TX) for debug purpose
+            sendCommandToModem("AT+HTTPTERM"); // replace with sendCommandToModem("AT+HTTPREAD=0,200"); if you want to read HTTP response (on modem TX) for debug purpose
             waitForNextStep(100);
             return;
         }
 
         if (modem_step == GO_SLEEP)
         {
-            sendToModem("AT+CSCLK=2");
+            // we don't send modem to sleep immediately after start up to ensure enough time for attaching to mobile network
+            // we skip a sleep cycle periodically, to give a chance to recover if something went wrong
+            if (millis() > NO_SLEEP_AFTER_START_UP_MN * 60 * 1000 && post_cnt % SKIP_SLEEP_EVERY != 0)
+            {
+                sendCommandToModem("AT+CSCLK=2");
+            }
             modem_step = SLEEP;
             return;
         }
