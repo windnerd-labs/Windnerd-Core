@@ -165,6 +165,7 @@ void processModem()
                 sendCommandToModem("AT+CSCLK=2");
             }
             modem_step = SLEEP;
+            post_cnt++;
             return;
         }
     }
