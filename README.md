@@ -46,7 +46,7 @@ ex: `WNI,10.4,149`
 `WNA,<speed avg>,<direction avg 0-359>,<min speed>,<max speed>`
 ex: `WNA,12.2,93,0,21.4`  
 
-The factory firmware is based on an [Arduino example sketch](examples/factory-v1/factory-v1.ino) that can be easily tweaked to your own needs.
+The factory firmware is based on an [Arduino example sketch](examples/01-factory-v1/01-factory-v1.ino) that can be easily tweaked to your own needs.
 
 [**How to read serial data from another device**](docs/READSERIAL.md)
 
