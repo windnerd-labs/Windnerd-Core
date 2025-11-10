@@ -1,4 +1,4 @@
-# LTE (4G) modem SIMCOM A7670X
+# LTE Cat-1 (4G) modem SIMCOM A7670X
 
 ## Intro
 This example demonstrates how to use a SIMCOM A7670X LTE Cat-1 modem to upload wind data every 2 minutes using the [WindNerd Transfer Protocol](https://windnerd.net/docs/wind-transfer-protocol/).
@@ -43,11 +43,11 @@ Now the battery positive wire should be soldered directly on the board.
 
 ## WindNerd Core Programming
 
-- Open lte-modem-A7670X example sketch, find the line below and replace the secret key with one available on your [windnerd dashboard](https://windnerd.net/en/management):
+Open lte-modem-A7670X example sketch, find the line below and replace the secret key with one available on your [windnerd dashboard](https://windnerd.net/en/management):
 
 `#define WTP_SECRET_KEY "af3ffa12c4937ddf"`
 
-- [Compile and upload](../../docs/PROGRAM.md) the sketch to your WindNerd Core
+[Compile and upload](../../docs/PROGRAM.md) the sketch to your WindNerd Core
 
 
 ## Commissioning
