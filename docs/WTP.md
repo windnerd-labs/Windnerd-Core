@@ -161,6 +161,7 @@ We post high-frequency samples every 3 seconds:
   "wind_unit": "ms",
   "samples": [
     { "wind_inst": 3.1, "wind_dir": 90 }
+  ]
 }
 ```
 
