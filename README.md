@@ -12,7 +12,7 @@ It is [**available as a kit**](https://windnerd.net/en/shop), which includes the
 
 You can use it as a dedicated wind **sensor module** for your weather station, or as an **Arduino compatible development board** that can, for example:
 
-- Control peripherals such as a [LTE modem](examples/01-factory-v1/02-lte-modem-A7670X/README.md) to send data remotely
+- Control peripherals such as a [LTE modem](examples/02-lte-modem-A7670X/) to send data remotely
 - Drive LEDs that blink according to wind speed and direction
 - Interface with other sensors (e.g., temperature, humidity, pressure)
 
