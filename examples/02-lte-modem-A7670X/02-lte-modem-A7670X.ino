@@ -16,7 +16,7 @@
 #define SKIP_SLEEP_EVERY 15
 
 WN_Core Anemometer;
-HardwareSerial SerialOutput(USART2); // to serial LTE modem (SIM7670E, SIM7080G, AIR780E...), only TX2 is used, RX2 is not read
+HardwareSerial SerialOutput(USART2); // to serial LTE modem, only TX2 is used, RX2 is not read
 HardwareSerial SerialDebug(USART1);  // TX1 only to serial debug console
 
 unsigned long last_uploading_time = millis();
@@ -26,12 +26,12 @@ unsigned post_cnt = 0;
 enum Modem_steps
 {
     START = 0,
+    TERMINATE,
     INIT,
     SET_URL,
     SET_HEADERS,
     SET_DATA,
     POST,
-    TERMINATE,
     GO_SLEEP,
     SLEEP,
 };
@@ -96,6 +96,13 @@ void processModem()
     if (modem_step != SLEEP && (millis() - last_step_time > time_to_wat_before_next_step))
     {
 
+        if (modem_step == TERMINATE)
+        {
+            sendCommandToModem("AT+HTTPTERM");
+            waitForNextStep(100);
+            return;
+        }
+
         if (modem_step == INIT)
         {
             sendCommandToModem("AT+HTTPINIT");
@@ -149,12 +156,7 @@ void processModem()
             return;
         }
 
-        if (modem_step == TERMINATE)
-        {
-            sendCommandToModem("AT+HTTPTERM"); // replace with sendCommandToModem("AT+HTTPREAD=0,200"); if you want to read HTTP response (on modem TX) for debug purpose
-            waitForNextStep(100);
-            return;
-        }
+
 
         if (modem_step == GO_SLEEP)
         {
