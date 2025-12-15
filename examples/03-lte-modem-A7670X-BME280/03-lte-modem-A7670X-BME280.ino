@@ -19,8 +19,8 @@
 WN_Core Anemometer;
 HardwareSerial SerialOutput(USART2);  // to serial LTE modem (SIM7670E, SIM7080G, AIR780E...), only TX2 is used, RX2 is not read
 
-Bme280TwoWire atmo_atmo_sensor;
-TwoWire Wire2; // I2C2 rx1 -
+Bme280TwoWire sensor;
+TwoWire Wire2;
 
 unsigned long last_uploading_time = millis();
 unsigned post_cnt = 0;
@@ -28,12 +28,12 @@ unsigned post_cnt = 0;
 // steps for uploading wind data
 enum Modem_steps {
   START = 0,
+  TERMINATE,
   INIT,
   SET_URL,
   SET_HEADERS,
   SET_DATA,
   POST,
-  TERMINATE,
   GO_SLEEP,
   SLEEP,
 };
@@ -43,10 +43,10 @@ unsigned long last_step_time = millis();
 unsigned long time_to_wat_before_next_step = 0;
 Modem_steps modem_step = START;
 
-// determine power voltage from ADC measurement on PB0 (require resistor bridge divider)
+
 float getPowerVoltage() {
   float raw_voltage = analogRead(PB0) * 3.3f / 1024;  // ADC voltage reference is Vcc regulated at 3.3V, 10 bits ADC -> 1024 measurement steps
-  return raw_voltage * 2 + 0.22;                      // we multiply by 2 because of bridge divider, we add 0.22 to compensate for input diode voltage drop
+  return raw_voltage * 2 + 0.22;                      // we multiply by 2 because of bridge divider, we add 0.22 to compenstae for input diode voltage drop
 }
 
 
@@ -65,7 +65,7 @@ void sendTextToModem(char *txt) {
   SerialOutput.print(txt);
 }
 
-// compose a wind report according to WTP formatting
+// compose a message to send 1 or more wind reports via WTP
 void composeReportLine(unsigned i, char *buffer) {
   wn_wind_report_t report = Anemometer.computeReportForPeriodInSecIndexedFromLast(60, i);
   char wa[6], wn[6], wx[6];
@@ -76,7 +76,6 @@ void composeReportLine(unsigned i, char *buffer) {
   sprintf(buffer, "r,wa=%s,wd=%03d,wn=%s,wx=%s;", wa, report.avg_dir, wn, wx);
 }
 
-// compose a wind report according to WTP formatting with also battery voltage and atmospheric values
 void composeReportLineWithVoltageAndAtmo(unsigned i, char *buffer) {
   wn_wind_report_t report = Anemometer.computeReportForPeriodInSecIndexedFromLast(60, i);
   char wa[6], wn[6], wx[6], vo[6], tp[7], pr[10], hu[8];
@@ -88,15 +87,15 @@ void composeReportLineWithVoltageAndAtmo(unsigned i, char *buffer) {
 
   dtostrf(getPowerVoltage(), 3, 2, vo);
 
-  dtostrf(atmo_sensor.getTemperature(), 5, 1, tp);
-  dtostrf(atmo_sensor.getPressure() / 100, 6, 1, pr);
-  dtostrf(atmo_sensor.getHumidity(), 4, 1, hu);
+  dtostrf(sensor.getTemperature(), 5, 1, tp);
+  dtostrf(sensor.getPressure() / 100, 6, 1, pr);
+  dtostrf(sensor.getHumidity(), 4, 1, hu);
 
   sprintf(buffer, "r,wa=%s,wd=%03d,wn=%s,wx=%s,vo=%s,tp=%s,pr=%s,hu=%s;", wa, report.avg_dir, wn, wx, vo, tp, pr, hu);
 }
 
 
-// compose a message to send aggregated instant wind samples via WTP
+// compose a message to send aggregated instany wind samples via WTP
 void composeSampleLine(unsigned i, char *buffer) {
   wn_instant_wind_sample_t sample = Anemometer.getSampleIndexedFromLast(i);
   char wi[6];
@@ -114,6 +113,13 @@ void processModem() {
   }
 
   if (modem_step != SLEEP && (millis() - last_step_time > time_to_wat_before_next_step)) {
+
+
+    if (modem_step == TERMINATE) {
+      sendCommandToModem("AT+HTTPTERM");  // replace with sendCommandToModem("AT+HTTPREAD=0,200"); if you want to read HTTP response (on modem TX) for debug purpose
+      waitForNextStep(100);
+      return;
+    }
 
     if (modem_step == INIT) {
       sendCommandToModem("AT+HTTPINIT");
@@ -163,11 +169,7 @@ void processModem() {
       return;
     }
 
-    if (modem_step == TERMINATE) {
-      sendCommandToModem("AT+HTTPTERM");  // replace with sendCommandToModem("AT+HTTPREAD=0,200"); if you want to read HTTP response (on modem TX) for debug purpose
-      waitForNextStep(100);
-      return;
-    }
+
 
     if (modem_step == GO_SLEEP) {
       // we don't send modem to sleep immediately after start up to ensure enough time for attaching to mobile network
@@ -191,8 +193,8 @@ void setup() {
   Wire2.setSDA(PA12);
   Wire2.begin();
 
-  atmo_sensor.begin(Bme280TwoWireAddress::Primary, &Wire2);
-  atmo_sensor.setSettings(Bme280Settings::indoor());
+  sensor.begin(Bme280TwoWireAddress::Primary, &Wire2);
+  sensor.setSettings(Bme280Settings::indoor());
   delay(2000);
 }
 
