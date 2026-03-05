@@ -56,9 +56,6 @@ void wn_read_angle_sensor_register(uint8_t reg, uint8_t *data, size_t length)
 void wn_init_angle_sensor()
 {
 
-  Wire.setSDA(PB9);
-  Wire.setSCL(PB8);
-
   Wire.begin();
 
   uint8_t rx[1];

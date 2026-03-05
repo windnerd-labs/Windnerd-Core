@@ -9,15 +9,9 @@
 #include "Windnerd_Core.h"
 #include "Windnerd_TMAG5273.h"
 #include <HardwareTimer.h>
+#include <Wire.h>
 
 HardwareTimer *tickerTimer = nullptr;
-
-// LED pins for WindNerd Core board
-#define SPEED_LED PA7
-#define NORTH_LED PB3
-
-// Pulse/speed input pin for WindNerd Core board
-#define SPEED_INPUT PC15
 
 // frequency to speed ratio for standard rotor
 #define HZ_TO_MS 1.31
@@ -38,11 +32,13 @@ HardwareTimer *tickerTimer = nullptr;
 static volatile bool wn_ticker = false;         // flag to indicate that a tick interrupt has happened
 static volatile uint32_t speed_pulse_count = 0; // to be incremented by rising edge interrupts on speed pulse input
 static volatile bool low_power_mode = false;
+static volatile uint8_t isr_speed_led_pin = CORE_SPEED_LED_PIN;
+
 
 void onSpeedPulseISR()
 {
   if (!low_power_mode)
-    digitalWrite(SPEED_LED, HIGH); // signal pulse by turning the speed LED ON, it will be turned OFF during the next tick
+    digitalWrite(isr_speed_led_pin, HIGH); // signal pulse by turning the speed LED ON, it will be turned OFF during the next tick
   speed_pulse_count++;
 }
 
@@ -51,14 +47,23 @@ void onTickerTimerISR()
   wn_ticker = true;
 }
 
-WN_Core::WN_Core()
+WN_Core::WN_Core(
+    uint8_t speed_led_pin,
+    uint8_t north_led_pin,
+    uint8_t speed_input_pin,
+    uint8_t scl_pin,
+    uint8_t sda_pin
+)
+    : _speed_led_pin(speed_led_pin),
+      _north_led_pin(north_led_pin),
+      _speed_input_pin(speed_input_pin),
+      _scl_pin(scl_pin),
+      _sda_pin(sda_pin),
+      _HZ_to_ms(HZ_TO_MS),
+      _wind_average_period_sec(DEFAULT_AVG_PERIOD_SEC),
+      _wind_update_period_sec(DEFAULT_UPDATE_PERIOD_SEC)
 {
-  _speed_led_pin = SPEED_LED;
-  _north_led_pin = NORTH_LED;
-  _speed_input_pin = SPEED_INPUT;
-  _HZ_to_ms = HZ_TO_MS;
-  _wind_average_period_sec = DEFAULT_AVG_PERIOD_SEC;
-  _wind_update_period_sec = DEFAULT_UPDATE_PERIOD_SEC;
+  isr_speed_led_pin = _speed_led_pin;
 }
 
 void WN_Core::begin()
@@ -71,6 +76,9 @@ void WN_Core::begin()
   pinMode(_north_led_pin, OUTPUT);
   digitalWrite(_north_led_pin, HIGH);
 
+  Wire.setSDA(_sda_pin);
+  Wire.setSCL(_scl_pin);
+
   wn_init_angle_sensor();
 
   tickerTimer = new HardwareTimer(TIM3);
@@ -79,9 +87,10 @@ void WN_Core::begin()
   tickerTimer->resume();
 
   pinMode(_speed_input_pin, INPUT);
-  attachInterrupt(digitalPinToInterrupt(SPEED_INPUT), onSpeedPulseISR, RISING);
+  attachInterrupt(digitalPinToInterrupt(_speed_input_pin), onSpeedPulseISR, RISING);
   last_sampling_window_millis = millis();
 }
+
 
 // set the averaging period for average wind report
 bool WN_Core::setAveragingPeriodInSec(uint16_t period)
@@ -114,6 +123,12 @@ bool WN_Core::setReportingIntervalInSec(uint16_t period)
 void WN_Core::invertVanePolarity(bool should_invert)
 {
   _invert_polarity = should_invert;
+}
+
+// set an alternative rotor frequency to wind speed ratio (Hz to m/s)
+void WN_Core::setFrequencyToWindSpeedRatio(float ratio)
+{
+  _HZ_to_ms = ratio;
 }
 
 // turn on North led when vane is roughly north
@@ -194,17 +209,20 @@ void WN_Core::loop()
   }
 }
 
+// Compute wind report over the most recent interval (seconds).
 wn_wind_report_t WN_Core::computeReportForRecentPeriodInSec(uint16_t period)
 {
   return computeReportForPeriodInSecIndexedFromLast(period, 0);
 }
 
+// Return the formatted wind sample indexed from the newest sample in the rolling buffer.
 wn_instant_wind_sample_t WN_Core::getSampleIndexedFromLast(uint16_t index)
 {
   wn_raw_wind_sample_t raw_sample = RollingBuffer.get(index);
   return formatRawSample(raw_sample);
 }
 
+// Compute a wind report for a period (seconds), offset by an index (seconds) from the latest data.
 wn_wind_report_t WN_Core::computeReportForPeriodInSecIndexedFromLast(uint16_t period, uint16_t index)
 {
 

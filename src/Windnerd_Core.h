@@ -11,6 +11,18 @@
 #include "Windnerd_Rolling_Buffer.h"
 #include "Windnerd_Vector_Averager.h"
 
+// LED pins for WindNerd Core board
+#define CORE_SPEED_LED_PIN PA7
+#define CORE_NORTH_LED_PIN 17
+
+// Pulse/speed input pin for WindNerd Core board
+#define CORE_SPEED_INPUT_PIN 25
+
+// I2C pins for WindNerd Core board
+#define CORE_SDA_PIN 23
+#define CORE_SCL_PIN 22
+
+
 typedef struct
 {
   float speed = 0;
@@ -37,8 +49,13 @@ class WN_Core
 {
 public:
   // Constructor
-  WN_Core();
-
+    WN_Core(
+      uint8_t speed_led_pin = CORE_SPEED_LED_PIN,
+      uint8_t north_led_pin = CORE_NORTH_LED_PIN,
+      uint8_t speed_input_pin = CORE_SPEED_INPUT_PIN,
+      uint8_t scl_pin = CORE_SCL_PIN,
+      uint8_t sda_pin = CORE_SDA_PIN
+    );
   void loop(void);
   // set a callback function that will be triggered  every 3 sec for instant wind update
   void onInstantWindUpdate(void (*cb)(wn_instant_wind_sample_t instant_report));
@@ -51,6 +68,7 @@ public:
   void begin();
   bool setAveragingPeriodInSec(uint16_t period);
   bool setReportingIntervalInSec(uint16_t period);
+  void setFrequencyToWindSpeedRatio(float ratio);
   void setSpeedUnit(wn_wind_unit_t unit);
   void invertVanePolarity(bool should_invert);
   void enableLowPowerMode();
@@ -66,6 +84,9 @@ private:
   uint8_t _speed_led_pin;
   uint8_t _north_led_pin;
   uint8_t _speed_input_pin;
+  uint8_t _scl_pin;
+  uint8_t _sda_pin;
+
 
   uint16_t _wind_average_period_sec;
   uint16_t _wind_update_period_sec;
