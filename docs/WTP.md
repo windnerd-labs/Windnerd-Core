@@ -88,7 +88,7 @@ Two kinds of data can be posted:
 | `wind_min`    | `wn` | number | Yes      | 0    | 360  | Minimum wind speed during the interval         |
 | `wind_max`    | `wx` | number | Yes      | 0    | 360  | Maximum wind speed during the interval         |
 | `wind_dir`    | `wd` | number | Yes      | 0    | 360  | Average wind direction in degrees (0–359)      |
-| `temperature` | `tp` | number | No       | -60  | 80   | Ambient temperature                            |
+| `temperature` | `tp` | number | No       | -99  | 200   | Ambient temperature                            |
 | `humidity`    | `hu` | number | No       | 0    | 100  | Relative humidity (%)                          |
 | `pressure`    | `pr` | number | No       | 200  | 1100 | Atmospheric pressure (hPa)                     |
 | `voltage`     | `vo` | number | No       | 0    | 999  | Voltage (V)                                    |
