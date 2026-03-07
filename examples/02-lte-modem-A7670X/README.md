@@ -43,7 +43,7 @@ Now the battery positive wire should be soldered directly on the board.
 
 ## WindNerd Core Programming
 
-Open lte-modem-A7670X example sketch, find the line below and replace the secret key with one available on your [windnerd dashboard](https://windnerd.net/en/management):
+Open lte-modem-A7670X example sketch, find the line below and replace the secret key with one available on your [windnerd.net dashboard](https://windnerd.net/en/management):
 
 `#define WTP_SECRET_KEY "af3ffa12c4937ddf"`
 
@@ -78,7 +78,7 @@ Uncomment the following line in the sketch to activate the feature
 
 ## Temperature, humidity, atmospheric pressure measurement
 
-Temperature, humidity, and atmospheric pressure can be monitored by adding a BME280 sensor on the secondary I²C bus, which shares the same pins as USART1. Without a **radiation shield**, temperature and humidity measurements may not be very accurate.
+Temperature, humidity, and atmospheric pressure can be monitored by adding a BME280 sensor (or compatible equivalent like BMP280 or YMP280) on the secondary I²C bus, which shares the same pins as USART1. Without a **radiation shield**, temperature and humidity measurements may not be very accurate.
 
 | USART1    | I2C2
  | -----|------- |

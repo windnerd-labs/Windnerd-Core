@@ -1,7 +1,32 @@
 # How to program the WindNerd Core
 
-## Download and install Arduino IDE 2 
 
+## Install STM32CubeProgrammer
+
+To upload sketches using ST-Link (SWD), you must install STM32CubeProgrammer.
+
+- Download STM32CubeProgrammer from the STMicroelectronics website (for Windows, MacOS or Linux):
+https://www.st.com/en/development-tools/stm32cubeprog.html
+
+- Install the software for your operating system following the instructions from STMicroelectronics
+
+During installation, make sure the following components are installed:
+
+- STM32CubeProgrammer
+
+- ST-Link drivers
+
+After installation, connect your ST-Link programmer and verify it works:
+
+- Start STM32CubeProgrammer
+
+- Select ST-Link
+
+- Click Connect
+
+If the connection succeeds, your system is ready to upload firmware from the Arduino IDE.
+
+## Download and install Arduino IDE 2 
 
 https://docs.arduino.cc/software/ide-v2/tutorials/getting-started/ide-v2-downloading-and-installing/
 
