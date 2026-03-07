@@ -146,7 +146,7 @@ void WN_WTP_PAYLOAD::composeAndSendReportLine(unsigned int line_index, Print* mo
     }
     if (_payload_config.has_voltage) {
       char voltage[VOLTAGE_MAX_LENGTH + 1];
-      dtostrf(_voltage, VOLTAGE_MAX_LENGTH, 1, voltage);
+      dtostrf(_voltage, VOLTAGE_MAX_LENGTH, 2, voltage);
       line += ",vo=";
       line += voltage;
     }
