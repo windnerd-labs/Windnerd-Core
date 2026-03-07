@@ -149,7 +149,7 @@ void processModem() {
       // we don't send modem to sleep immediately after start up to ensure enough time for attaching to mobile network
       // we skip a sleep cycle periodically, to give a chance to recover if something went wrong
       // we reboot the modem daily as extra precaution
-      if (post_cnt % REBOOT_MODEM_EVERY != 0) {
+      if (post_cnt % REBOOT_MODEM_EVERY == 0) {
         sendCommandToModem("AT+CPOF");
       } else if (millis() > NO_SLEEP_AFTER_START_UP_MN * 60 * 1000 && post_cnt % SKIP_SLEEP_EVERY != 0) {
         sendCommandToModem("AT+CSCLK=2");
