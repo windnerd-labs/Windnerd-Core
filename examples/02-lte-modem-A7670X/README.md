@@ -3,7 +3,7 @@
 ## Intro
 This example demonstrates how to use a SIMCOM A7670X LTE Cat-1 modem to upload wind data every 2 minutes using the [WindNerd Transfer Protocol](../../docs/WTP.md).
 
-Between uploads modem is is placed into sleep mode to minimize power consumption. Measured system average is ~6 mA under good LTE coverage, enabling operation from a single 18650 cell recharged via a small solar panel.
+Between uploads modem is is placed into sleep mode to minimize power consumption. Measured system average is ~6 mA to 12mA under good LTE coverage, enabling operation from a single 18650 cell recharged via a small solar panel.
 
 Most SIMCOM and Quectel LTE modems using standard AT command sets can also work with minimal adaptation.
 
@@ -27,18 +27,18 @@ The module includes an onboard regulator and can be powered directly from 5V alo
 
 Always connect an antenna when powering the module up. 
 
-![Wiring 5V](../../docs/img/A7670E-wiring-5v.jpg)
+![Wiring 5V](img/A7670E-wiring-5v.jpg)
 
 
 ### Powered from 1 lithium cell
 
 For better efficiency, the A7670X chipset can be powered directly on lithium battery after a little modification on the module. We bypass the inefficient linear voltage regulator and remove a resistance that wastes too much current to the ground.
 
-![Regulator bypass](../../docs/img/A7670E-regulator-bypass.jpg)
+![Regulator bypass](img/A7670E-regulator-bypass.jpg)
 
 Now the battery positive wire should be soldered directly on the board.
 
-![Wiring 1-cell Lithium](../../docs/img/A7670E-wiring-1-cell-lithium.jpg)
+![Wiring 1-cell Lithium](img/A7670E-wiring-1-cell-lithium.jpg)
 
 
 ## WindNerd Core Programming
@@ -64,6 +64,37 @@ On-board LED behavior:
 
 
 Around 2 minutes after powering-up, the station set for your device will show live wind data.
+
+
+## Power Voltage measurement
+
+It is possible to additionally monitor the supply voltage by soldering two 22 kΩ resistors (or other identical values in the same range, such as 47 kΩ) as a voltage divider between **GND–PB0–VCC**.
+![22K resistors soldered on dev board](img/bridge-divider.jpg)
+
+Uncomment the following line in the sketch to activate the feature
+```
+#define ENABLE_VOLTAGE
+```
+
+## Temperature, humidity, atmospheric pressure measurement
+
+Temperature, humidity, and atmospheric pressure can be monitored by adding a BME280 sensor on the secondary I²C bus, which shares the same pins as USART1. Without a **radiation shield**, temperature and humidity measurements may not be very accurate.
+
+| USART1    | I2C2
+ | -----|------- |
+| TX1 | SCL2 |
+| RX1 | SDA2|
+
+BME280 is powered from GND-3.3V pin headers.
+
+![bme280 added to dev board](img/bme280.jpg)
+
+
+Uncomment the following line in the sketch to activate the feature
+```
+#define ENABLE_BME_280
+```
+
 
 ## Debugging (Reading AT Responses)
 
