@@ -36,7 +36,7 @@ HardwareSerial SerialOutput(USART2);  // to serial LTE modem (SIM7670E, SIM7080G
 WN_WTP_PAYLOAD Wtp_payload;
 
 unsigned long last_uploading_time = millis();
-unsigned post_cnt = 0;
+unsigned post_cnt = 1;
 
 // steps for uploading wind data
 enum Modem_steps {
