@@ -187,6 +187,8 @@ void setup() {
   Wire2.begin();
   sensor.begin(Bme280TwoWireAddress::Primary, &Wire2);
   sensor.setSettings(Bme280Settings::indoor());
+#else
+  SerialDebug.begin(115200);
 #endif
   delay(1000);
 }
