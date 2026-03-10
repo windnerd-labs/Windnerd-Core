@@ -180,6 +180,7 @@ static inline void feedWatchdog(void) {
 void setup() {
   initWatchdog();
   SerialOutput.begin(115200);
+  Anemometer.invertVanePolarity(false);                 // change to true if you notice north and south are inverted
   Anemometer.begin();
 #ifdef ENABLE_BME_280
   Wire2.setSCL(PA11);
