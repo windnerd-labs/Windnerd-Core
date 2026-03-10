@@ -90,6 +90,8 @@ BME280 is powered from GND-3.3V pin headers.
 ![bme280 added to dev board](img/bme280.jpg)
 
 
+The Arduino library `Bme280 by Eduard Malokhvii` is required.
+
 Uncomment the following line in the sketch to activate the feature
 ```
 #define ENABLE_BME_280
