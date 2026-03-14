@@ -13,6 +13,7 @@
 
 #define WTP_SECRET_KEY "af3ffa12c4937ddf"  // Replace with the secret key for your WTP device
 
+//#define APN "internet"  // uncomment this line and replace with the APN for your SIM card (necessary with some networks)
 //#define ENABLE_VOLTAGE  // uncomment this line for power voltage measurement (require divider bridge, see README)
 //#define ENABLE_BME_280  // uncomment this line for extra temperature, humidity and pressure measurement with external BME280 sensor
 
@@ -27,7 +28,7 @@ HardwareSerial SerialDebug(USART1);
 #define REPORT_INTERVAL_MN 2  // Interval in minutes between uploading wind data via WindNerd Transfer Protocol (https://windnerd.net/docs/wind-transfer-protocol)
 #define NO_SLEEP_AFTER_START_UP_MN 5
 #define SKIP_SLEEP_EVERY 15   // in upload cycles
-#define REBOOT_MODEM_EVERY 30 * 24 // one reboot a day keeps the bugs away
+#define REBOOT_MODEM_EVERY (30 * 24) // one reboot a day keeps the bugs away
 
 
 WN_Core Anemometer;
@@ -41,6 +42,9 @@ unsigned post_cnt = 1;
 // steps for uploading wind data
 enum Modem_steps {
   START = 0,
+#ifdef APN
+  SET_APN,
+#endif
   TERMINATE,
   INIT,
   SET_URL,
@@ -91,8 +95,18 @@ void processModem() {
 
   if (modem_step != SLEEP && (millis() - last_step_time > time_to_wait_before_next_step)) {
 
+#ifdef APN
+    if (modem_step == SET_APN) {
+      char buffer[64];
+      sprintf(buffer, "AT+CGDCONT=1,\"IP\",\"%s\"", APN);
+      sendCommandToModem(buffer);
+      waitForNextStep(100);
+      return;
+    }
+#endif
+
     if (modem_step == TERMINATE) {
-      sendCommandToModem("AT+HTTPTERM");  // replace with sendCommandToModem("AT+HTTPREAD=0,200"); if you want to read HTTP response (on modem TX) for debug purpose
+      sendCommandToModem("AT+HTTPTERM");
       waitForNextStep(100);
       return;
     }
