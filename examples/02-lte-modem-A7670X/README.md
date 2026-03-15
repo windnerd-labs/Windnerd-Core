@@ -49,6 +49,10 @@ Open lte-modem-A7670X example sketch, find the line below and replace the secret
 
 [Compile and upload](../../docs/PROGRAM.md) the sketch to your WindNerd Core
 
+It may be necessary to specify the APN for the network in use. For example, if you use a Hologram IoT SIM card, uncomment the line and set the APN as follows:
+
+`#define APN "hologram"`
+
 
 ## Commissioning
 
