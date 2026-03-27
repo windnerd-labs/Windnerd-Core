@@ -55,3 +55,14 @@ The factory firmware is based on an [Arduino example sketch](examples/01-factory
 This repository provides an Arduino library that implements a driver for the magnetic sensors and computes wind speed and direction, exposing the values through a simple API.
 
 [**How to install WindNerd Core library and program the board**](docs/PROGRAM.md)
+
+## 4G Integration
+
+The WindNerd Core can be integrated with 4G modules for remote data transmission. An example implementation with the **Luat Air780E** 4G board is provided, featuring:
+
+- Periodic wake-up every 15 minutes
+- Automatic transmission of wind speed and direction data
+- Power-efficient operation with sleep mode
+- AT command-based communication protocol
+
+[**4G Integration Guide**](docs/4G-INTEGRATION.md) | [**Example Sketch**](examples/4g-air780e/)
