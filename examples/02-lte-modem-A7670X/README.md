@@ -5,7 +5,9 @@ This example demonstrates how to use a SIMCOM A7670X LTE Cat-1 modem to upload w
 
 Between uploads modem is is placed into sleep mode to minimize power consumption. Measured system average is ~6 mA to 12mA under good LTE coverage, enabling operation from a single 18650 cell recharged via a small solar panel.
 
-Most SIMCOM and Quectel LTE modems using standard AT command sets can also work with minimal adaptation.
+Data consumption is about 40MB per month.
+
+Most SIMCOM and Quectel LTE modems using standard AT command sets should also work with minimal adaptation.
 
 ## LTE module
 
