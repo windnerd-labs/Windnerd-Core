@@ -1,7 +1,5 @@
 # WindNerd Core - Open Source Sensor & Development Board for 3D-Printed Anemometers
 
-
-
 ## Intro
 
 The WindNerd Core is a **full magnetic** sensor board designed to fit inside the [**WindNerd 3D-printed-anemometer**](https://github.com/windnerd-labs/Anemometer-3D-files).
@@ -55,3 +53,5 @@ The factory firmware is based on an [Arduino example sketch](examples/01-factory
 This repository provides an Arduino library that implements a driver for the magnetic sensors and computes wind speed and direction, exposing the values through a simple API.
 
 [**How to install WindNerd Core library and program the board**](docs/PROGRAM.md)
+
+[**WindNerd Core API reference**](docs/API-REFERENCE.md)
