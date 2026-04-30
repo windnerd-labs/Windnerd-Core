@@ -79,7 +79,7 @@ void WN_Core::begin()
   Wire.setSDA(_sda_pin);
   Wire.setSCL(_scl_pin);
 
-  wn_init_angle_sensor();
+  wn_init_angle_sensor(_scl_pin, _sda_pin);
 
   tickerTimer = new HardwareTimer(TIM3);
   tickerTimer->setOverflow(TICK_HZ, HERTZ_FORMAT);
@@ -332,4 +332,9 @@ void WN_Core::disableLowPowerMode()
 bool WN_Core::isLowPowerMode()
 {
   return low_power_mode;
+}
+
+uint8_t WN_Core::getI2cError()
+{
+  return wn_get_last_angle_sensor_i2c_error();
 }

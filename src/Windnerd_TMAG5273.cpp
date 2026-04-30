@@ -11,6 +11,46 @@
 
 #define I2C_ADDRESS 0x35
 
+static uint8_t _scl_pin = 0;
+static uint8_t _sda_pin = 0;
+static uint8_t _i2c_error = 0;
+
+
+// Bitbang the I2C bus to release a slave stuck holding SDA low. Pulses SCL up
+// to 9 times so the slave can finish the in-flight byte, then issues a STOP
+// and re-inits Wire. Relies on external pull-ups (lines released = high).
+static void wn_recover_i2c_bus()
+{
+  Wire.end();
+
+  pinMode(_scl_pin, INPUT_PULLUP);
+  pinMode(_sda_pin, INPUT_PULLUP);
+  delayMicroseconds(10);
+
+  for (uint8_t i = 0; i < 9; i++)
+  {
+    if (digitalRead(_sda_pin) == HIGH) break;
+    pinMode(_scl_pin, OUTPUT);
+    digitalWrite(_scl_pin, LOW);
+    delayMicroseconds(5);
+    pinMode(_scl_pin, INPUT_PULLUP);
+    delayMicroseconds(5);
+  }
+
+  // STOP condition: SDA rises while SCL is high
+  pinMode(_sda_pin, OUTPUT);
+  digitalWrite(_sda_pin, LOW);
+  delayMicroseconds(5);
+  pinMode(_scl_pin, INPUT_PULLUP);
+  delayMicroseconds(5);
+  pinMode(_sda_pin, INPUT_PULLUP);
+  delayMicroseconds(5);
+
+  Wire.setSDA(_sda_pin);
+  Wire.setSCL(_scl_pin);
+  Wire.begin();
+}
+
 // registers
 #define DEVICE_CONFIG_1 0x00
 #define DEVICE_CONFIG_2 0x01
@@ -31,21 +71,49 @@ typedef enum operating_mode
   OPERATING_MODE_WS
 } operating_mode_t;
 
+
+uint8_t wn_get_last_angle_sensor_i2c_error()
+{
+  return _i2c_error;
+}
+
 void wn_write_angle_sensor_register(uint8_t reg, uint8_t data)
 {
   Wire.beginTransmission(I2C_ADDRESS);
   Wire.write(reg);
   Wire.write(data);
-  Wire.endTransmission();
+  _i2c_error = Wire.endTransmission();
+
+  if (_i2c_error != 0)
+  {
+    wn_recover_i2c_bus();
+    Wire.beginTransmission(I2C_ADDRESS);
+    Wire.write(reg);
+    Wire.write(data);
+    _i2c_error = Wire.endTransmission();
+  }
 }
 
 void wn_read_angle_sensor_register(uint8_t reg, uint8_t *data, size_t length)
 {
   Wire.beginTransmission(I2C_ADDRESS);
   Wire.write(reg);
-  Wire.endTransmission();
+  _i2c_error = Wire.endTransmission();
+  if (_i2c_error != 0)
+  {
+    wn_recover_i2c_bus();
+    Wire.beginTransmission(I2C_ADDRESS);
+    Wire.write(reg);
+    _i2c_error = Wire.endTransmission();
+    if (_i2c_error != 0) return;
+  }
 
-  Wire.requestFrom(I2C_ADDRESS, length);
+  if (Wire.requestFrom(I2C_ADDRESS, length) != length)
+  {
+    _i2c_error = 6; // short/no read — outside Wire's 0..5 endTransmission codes
+    wn_recover_i2c_bus();
+    return;
+  }
 
   for (uint8_t i = 0; i < length && Wire.available(); i++)
   {
@@ -53,8 +121,10 @@ void wn_read_angle_sensor_register(uint8_t reg, uint8_t *data, size_t length)
   }
 }
 
-void wn_init_angle_sensor()
+void wn_init_angle_sensor(uint8_t scl_pin, uint8_t sda_pin)
 {
+  _scl_pin = scl_pin;
+  _sda_pin = sda_pin;
 
   Wire.begin();
 

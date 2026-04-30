@@ -74,6 +74,7 @@ public:
   void enableLowPowerMode();
   void disableLowPowerMode();
   bool isLowPowerMode();
+  uint8_t getI2cError();
   wn_wind_report_t computeReportForRecentPeriodInSec(uint16_t period);
   wn_wind_report_t computeReportForPeriodInSecIndexedFromLast(uint16_t period, uint16_t index);
   wn_instant_wind_sample_t getSampleIndexedFromLast(uint16_t index);

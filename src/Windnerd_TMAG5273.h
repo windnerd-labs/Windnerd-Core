@@ -9,5 +9,6 @@
 #pragma once
 #include "Arduino.h"
 
-void wn_init_angle_sensor();
+void wn_init_angle_sensor(uint8_t scl_pin, uint8_t sda_pin);
 uint16_t wn_read_then_make_angle_sensor_sleep();
+uint8_t wn_get_last_angle_sensor_i2c_error();
