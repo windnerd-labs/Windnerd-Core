@@ -24,6 +24,7 @@ HTTP:  http://wtp.windnerd.net/post
 Two kinds of data can be posted:
  - reports: these reports are stored in windnerd.net database. Average, minimum, and maximum values over longer periods are derived from them.
  - high-frequency wind samples: these samples are broadcast in real time to visualize and feel the wind as it happens. Aggregated samples are queued for delayed replay.
+ - logs: health data about the device: internal temperature, power voltage or free form logs.
 
 #### JSON
 
@@ -33,7 +34,7 @@ Two kinds of data can be posted:
 
 ```json
 {
-  "key": "3122fd880084fd55",
+  "secret_key": "3122fd880084fd55",
   "interval_mn": 1,
   "wind_unit": "ms",
   "temp_unit": "C",
@@ -64,20 +65,28 @@ Two kinds of data can be posted:
     { "wind_inst": 1.9, "wind_dir": 96 },
     { "wind_inst": 3.2, "wind_dir": 85 },
     { "wind_inst": 2.0, "wind_dir": 93 },
-    { "wind_inst": 2.1, "wind_dir": 90 }, // most ancient
+    { "wind_inst": 2.1, "wind_dir": 90 } // most ancient
+  ],
+  "logs": [
+    { "voltage": 3.86, "temp_in": 38.2, "meta": "no error" },
+    { "voltage": 3.85, "temp_in": 38.4, "meta": "no error" }
   ]
 }
 ```
 
 ##### Parameters Fields
 
-| Field         | Alt. | Type    | Required | Description                                               |
-| ------------- | ----- | ------- | -------- | --------------------------------------------------------- |
-| `key`         | `k`     | string  | Yes      | Secret key for authentication                             |
-| `interval_mn` | `i`     | integer | No       | Interval in minutes between reports (max: `60`, default: `1`)      |
+| Field         | Alt.    | Type    | Required | Description                                                         |
+| ------------- | -----   | ------- | -------- | ---------------------------------------------------------           |
+| `secret_key`  | `k`     | string  | Yes      | Secret key for authentication                                       |
+| `interval_mn` | `i`     | integer | No       | Interval in minutes between reports (max: `60`, default: `1`)       |
 | `wind_unit`   | `wu`    | string  | No       | Wind speed unit. Accepts `"kmh"`, `"ms"`, `"mph"` (default: `"ms"`) |
-| `temp_unit`   | `tu`   | string  | No       | Temperature unit. Accepts `"C"`, `"F"` (default: `"C"`)    |
-| `reports`     | `rp`    | array   | Yes      | Array of aggregated reports (max: 20 items)                             |
+| `temp_unit`   | `tu`    | string  | No       | Temperature unit. Accepts `"C"`, `"F"` (default: `"C"`)             |
+| `reports`     | `r`     | array   | No\*     | Array of aggregated reports (max: 20 items)                         |
+| `samples`     | `s`     | array   | No\*     | Array of aggregated samples (max: 200 items)                        |
+| `logs`        | `l`     | array   | No\*     | Array of aggregated logs (max: 10 items per 10 mn windows)         |
+
+\* At least one of `reports`, `samples`, or `logs` must be provided.
 
 
 ##### Report Fields
@@ -88,19 +97,27 @@ Two kinds of data can be posted:
 | `wind_min`    | `wn` | number | Yes      | 0    | 360  | Minimum wind speed during the interval         |
 | `wind_max`    | `wx` | number | Yes      | 0    | 360  | Maximum wind speed during the interval         |
 | `wind_dir`    | `wd` | number | Yes      | 0    | 360  | Average wind direction in degrees (0–359)      |
-| `temperature` | `tp` | number | No       | -99  | 200   | Ambient temperature                            |
+| `temperature` | `tp` | number | No       | -99  | 200  | Ambient temperature                            |
 | `humidity`    | `hu` | number | No       | 0    | 100  | Relative humidity (%)                          |
 | `pressure`    | `pr` | number | No       | 200  | 1100 | Atmospheric pressure (hPa)                     |
-| `voltage`     | `vo` | number | No       | 0    | 999  | Voltage (V)                                    |
-| `rssi`        | `rs` | number | No       | -999 | 999  | Signal strength indicator (RSSI)               |
 
 
 ##### Sample Fields
 
 | Field         | Alt. | Type   | Required | Min  | Max  | Description                                    |
 | ------------- | ---- | ------ | -------- | ---- | ---- | ---------------------------------------------- |
-| `wind_inst`    | `wi` | number | Yes      | 0    | 360  | Wind speed during the 3 sec interval |
-| `wind_dir`    | `wd` | number | Yes      | 0    | 360  | Wind direction during the 3 sec interval          |
+| `wind_inst`   | `wi` | number | Yes      | 0    | 360  | Wind speed during the 3 sec interval           |
+| `wind_dir`    | `wd` | number | Yes      | 0    | 360  | Wind direction during the 3 sec interval       |
+
+
+##### Log Fields
+
+| Field         | Alt. | Type   | Required | Min  | Max  | Description                                              |
+| ------------- | ---- | ------ | -------- | ---- | ---- | -------------------------------------------------------- |
+| `voltage`     | `vo` | number | No       | 0    | 999  | Voltage (V)                                              |
+| `rssi`        | `rs` | number | No       | -999 | 999  | Signal strength indicator (RSSI)                         |
+| `temp_in`     | `ti` | number | No       | -99  | 200  | Internal temperature                                     |
+| `meta`        | `mt` | string | No       | -    | 512  | Free-form payload for debug or metadata. Maximum length: 512 characters. Allowed characters: printable ASCII (0x20–0x7E) except `,` `;` `=`. |
 
 ---
 
@@ -112,11 +129,11 @@ Two kinds of data can be posted:
 
 Alternatively, the payload can be encoded as plain text. 
 
-The first line defines the parameters, and each subsequent line represents a report (line starting with `r`) or sample (line starting with `s`).
+The first line defines the parameters, and each subsequent line represents a report (line starting with `r`), a sample (line starting with `s`), or a log (line starting with `l`).
 
 Lines are separated by semicolons; end-of-line and carriage return characters are optional.
 
-Sample and report lines must be ordered from most recent to most ancient.
+Report, sample, and log lines must be ordered from most recent to most ancient.
 
 ```text
 k=3122fd880084fd55,i=1,wu=ms,tu=C;
@@ -125,6 +142,7 @@ r,wa=1.8,wd=45,wn=0.0,wx=2.0,tp=28,hu=85,pr=1016;
 r,wa=4.0,wd=180,wn=1.0,wx=5.0,tp=21,hu=60,pr=1010;
 r,wa=2.0,wd=200,wn=0.5,wx=2.5,tp=23,hu=72,pr=1011;
 r,wa=3.5,wd=310,wn=1.5,wx=4.5,tp=20,hu=65,pr=1009;
+l,vo=3.86,ti=38.2,mt=no error;
 s,wi=3.1,wd=90;
 s,wi=1.8,wd=75;
 s,wi=4.0,wd=110;
@@ -168,7 +186,7 @@ We post high-frequency samples every 3 seconds:
 We post a report every minute:
 ```json
 {
-  "key": "3122fd880084fd55",
+  "secret_key": "3122fd880084fd55",
   "interval_mn": 1,
   "wind_unit": "ms",
   "temp_unit": "C",

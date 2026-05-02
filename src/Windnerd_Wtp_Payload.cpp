@@ -51,6 +51,16 @@ void WN_WTP_PAYLOAD::setRSSI(float rssi) {
   _payload_config.has_rssi = true;
 }
 
+void WN_WTP_PAYLOAD::setInternalTemperature(float temp_in) {
+  _temp_in = temp_in;
+  _payload_config.has_temp_in = true;
+}
+
+void WN_WTP_PAYLOAD::setMeta(const char* meta) {
+  _meta = meta;
+  _payload_config.has_meta = true;
+}
+
 void WN_WTP_PAYLOAD::setSecretKey(char* secret_key) {
   _secret_key = secret_key;
 }
@@ -63,6 +73,8 @@ void WN_WTP_PAYLOAD::setSecretKey(char* secret_key) {
 #define PRESSURE_MAX_LENGTH 6  // 1099.9
 #define VOLTAGE_MAX_LENGTH 4   // 4.30
 #define RSSI_MAX_LENGTH 5      // -99.9
+#define TEMP_IN_MAX_LENGTH 5   //-99.0
+#define META_MAX_LENGTH 512
 
 
 unsigned int WN_WTP_PAYLOAD::calculatePayloadLength() {
@@ -85,17 +97,25 @@ unsigned int WN_WTP_PAYLOAD::calculatePayloadLength() {
     payload_length += PRESSURE_MAX_LENGTH + 4;
   }
 
-  if (_payload_config.has_voltage) {
-    payload_length += VOLTAGE_MAX_LENGTH + 4;
-  }
-
-  if (_payload_config.has_rssi) {
-    payload_length += RSSI_MAX_LENGTH + 4;
-  }
-
   // following report lines (only wind)
   payload_length += (_period_mn - 1) * wind_report_length;
 
+  // log line: l;
+  if (_payload_config.has_voltage || _payload_config.has_rssi || _payload_config.has_temp_in || _payload_config.has_meta) {
+    payload_length += 2;
+    if (_payload_config.has_voltage) {
+      payload_length += VOLTAGE_MAX_LENGTH + 4;
+    }
+    if (_payload_config.has_rssi) {
+      payload_length += RSSI_MAX_LENGTH + 4;
+    }
+    if (_payload_config.has_temp_in) {
+      payload_length += TEMP_IN_MAX_LENGTH + 4;
+    }
+    if (_payload_config.has_meta) {
+      payload_length += strlen(_meta) + 4;
+    }
+  }
 
   if (_payload_config.has_wind_samples) {
     payload_length += _period_mn * 20 * (SPEED_MAX_LENGTH + DIR_MAX_LENGTH + 10);
@@ -144,18 +164,45 @@ void WN_WTP_PAYLOAD::composeAndSendReportLine(unsigned int line_index, Print* mo
       line += ",pr=";
       line += pressure;
     }
-    if (_payload_config.has_voltage) {
-      char voltage[VOLTAGE_MAX_LENGTH + 1];
-      dtostrf(_voltage, VOLTAGE_MAX_LENGTH, 2, voltage);
-      line += ",vo=";
-      line += voltage;
-    }
-    if (_payload_config.has_rssi) {
-      char rssi[RSSI_MAX_LENGTH + 1];
-      dtostrf(_rssi, RSSI_MAX_LENGTH, 1, rssi);
-      line += ",rs=";
-      line += rssi;
-    }
+  }
+
+  line += ";";
+
+  modem->print(line);
+
+  if (debug) {
+    debug->print("Sent to modem: ");
+    debug->println(line);
+  }
+}
+
+
+// compose and print a log line via WTP
+void WN_WTP_PAYLOAD::composeAndSendLogLine(Print* modem, Print* debug) {
+
+  String line = "l";
+
+  if (_payload_config.has_voltage) {
+    char voltage[VOLTAGE_MAX_LENGTH + 1];
+    dtostrf(_voltage, VOLTAGE_MAX_LENGTH, 2, voltage);
+    line += ",vo=";
+    line += voltage;
+  }
+  if (_payload_config.has_rssi) {
+    char rssi[RSSI_MAX_LENGTH + 1];
+    dtostrf(_rssi, RSSI_MAX_LENGTH, 1, rssi);
+    line += ",rs=";
+    line += rssi;
+  }
+  if (_payload_config.has_temp_in) {
+    char temp_in[TEMP_IN_MAX_LENGTH + 1];
+    dtostrf(_temp_in, TEMP_IN_MAX_LENGTH, 1, temp_in);
+    line += ",ti=";
+    line += temp_in;
+  }
+  if (_payload_config.has_meta) {
+    line += ",mt=";
+    line += _meta;
   }
 
   line += ";";
@@ -199,6 +246,10 @@ void WN_WTP_PAYLOAD::sendPayload(Print* modem, Print* debug) {
 
   for (unsigned i = 0; i < _period_mn; i++) {
     composeAndSendReportLine(i, modem, debug);
+  }
+
+  if (_payload_config.has_voltage || _payload_config.has_rssi || _payload_config.has_temp_in || _payload_config.has_meta) {
+    composeAndSendLogLine(modem, debug);
   }
 
   if (_payload_config.has_wind_samples) {

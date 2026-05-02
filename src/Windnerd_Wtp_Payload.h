@@ -17,6 +17,8 @@ typedef struct {
   bool has_pressure = false;
   bool has_voltage = false;
   bool has_rssi = false;
+  bool has_temp_in = false;
+  bool has_meta = false;
   bool has_wind_samples = false;
   bool hmac_enabled = false;
 
@@ -32,6 +34,8 @@ public:
   void setPressure(float pressure);
   void setVoltage(float voltage);
   void setRSSI(float rssi);
+  void setInternalTemperature(float temp_in);
+  void setMeta(const char* meta);
   void setAnemometer(WN_Core* anemometer);
   void enableWindSamples();
   void setPeriodInMinutes(unsigned int period_mn);
@@ -49,8 +53,11 @@ private:
   float _pressure;
   float _voltage;
   float _rssi;
+  float _temp_in;
+  const char* _meta;
   unsigned int _period_mn = 1;
   char* _secret_key;
   void composeAndSendReportLine(unsigned int line_index, Print* modem, Print* debug);
   void composeAndSendSampleLine(unsigned int line, Print* modem, Print* debug);
+  void composeAndSendLogLine(Print* modem, Print* debug);
 };
