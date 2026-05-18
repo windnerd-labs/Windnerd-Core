@@ -45,6 +45,12 @@ typedef enum
   UNIT_MPH
 } wn_wind_unit_t;
 
+typedef enum
+{
+  LED_PUSH_PULL = 0, // default: push-pull, active-high (LED anode-to-pin, cathode-via-resistor-to-GND)
+  LED_OPEN_DRAIN     // open-drain, inverted (LED cathode-via-resistor-to-pin, anode-to-Vcc)
+} wn_led_drive_t;
+
 class WN_Core
 {
 public:
@@ -71,6 +77,8 @@ public:
   void setFrequencyToWindSpeedRatio(float ratio);
   void setSpeedUnit(wn_wind_unit_t unit);
   void invertVanePolarity(bool should_invert);
+  void setSpeedLedDrive(wn_led_drive_t mode);
+  void setNorthLedDrive(wn_led_drive_t mode);
   void enableLowPowerMode();
   void disableLowPowerMode();
   bool isLowPowerMode();
@@ -94,6 +102,12 @@ private:
   uint32_t ticks_cnt = 0; // ticks counter to be used as time base for periodic functions
   wn_wind_unit_t _unit_in_use = UNIT_MS;
   bool _invert_polarity = false;
+  wn_led_drive_t _speed_led_drive = LED_PUSH_PULL;
+  wn_led_drive_t _north_led_drive = LED_PUSH_PULL;
+  uint8_t _speed_led_on_level = HIGH;  // resolved in begin() based on drive mode
+  uint8_t _speed_led_off_level = LOW;
+  uint8_t _north_led_on_level = HIGH;
+  uint8_t _north_led_off_level = LOW;
 
   long last_sampling_window_millis = 0;
 

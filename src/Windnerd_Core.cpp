@@ -33,12 +33,13 @@ static volatile bool wn_ticker = false;         // flag to indicate that a tick 
 static volatile uint32_t speed_pulse_count = 0; // to be incremented by rising edge interrupts on speed pulse input
 static volatile bool low_power_mode = false;
 static volatile uint8_t isr_speed_led_pin = CORE_SPEED_LED_PIN;
+static volatile uint8_t isr_speed_led_on_level = HIGH; // resolved in begin() based on drive mode
 
 
 void onSpeedPulseISR()
 {
   if (!low_power_mode)
-    digitalWrite(isr_speed_led_pin, HIGH); // signal pulse by turning the speed LED ON, it will be turned OFF during the next tick
+    digitalWrite(isr_speed_led_pin, isr_speed_led_on_level); // signal pulse by turning the speed LED ON, it will be turned OFF during the next tick
   speed_pulse_count++;
 }
 
@@ -69,12 +70,19 @@ WN_Core::WN_Core(
 void WN_Core::begin()
 {
 
-  // turn on all LEDs so the board shows life a startup
-  pinMode(_speed_led_pin, OUTPUT);
-  digitalWrite(_speed_led_pin, HIGH);
+  // resolve on/off levels from drive mode (open-drain inverts: LOW = ON, high-Z = OFF)
+  _speed_led_on_level = (_speed_led_drive == LED_OPEN_DRAIN) ? LOW : HIGH;
+  _speed_led_off_level = (_speed_led_drive == LED_OPEN_DRAIN) ? HIGH : LOW;
+  _north_led_on_level = (_north_led_drive == LED_OPEN_DRAIN) ? LOW : HIGH;
+  _north_led_off_level = (_north_led_drive == LED_OPEN_DRAIN) ? HIGH : LOW;
+  isr_speed_led_on_level = _speed_led_on_level; // ISR uses static copy
 
-  pinMode(_north_led_pin, OUTPUT);
-  digitalWrite(_north_led_pin, HIGH);
+  // turn on all LEDs so the board shows life a startup
+  pinMode(_speed_led_pin, _speed_led_drive == LED_OPEN_DRAIN ? OUTPUT_OPEN_DRAIN : OUTPUT);
+  digitalWrite(_speed_led_pin, _speed_led_on_level);
+
+  pinMode(_north_led_pin, _north_led_drive == LED_OPEN_DRAIN ? OUTPUT_OPEN_DRAIN : OUTPUT);
+  digitalWrite(_north_led_pin, _north_led_on_level);
 
   Wire.setSDA(_sda_pin);
   Wire.setSCL(_scl_pin);
@@ -125,6 +133,18 @@ void WN_Core::invertVanePolarity(bool should_invert)
   _invert_polarity = should_invert;
 }
 
+// Must be called before begin() to take effect.
+void WN_Core::setSpeedLedDrive(wn_led_drive_t mode)
+{
+  _speed_led_drive = mode;
+}
+
+// Must be called before begin() to take effect.
+void WN_Core::setNorthLedDrive(wn_led_drive_t mode)
+{
+  _north_led_drive = mode;
+}
+
 // set an alternative rotor frequency to wind speed ratio (Hz to m/s)
 void WN_Core::setFrequencyToWindSpeedRatio(float ratio)
 {
@@ -137,11 +157,11 @@ void WN_Core::signalIfNorth(uint16_t angle)
 
   if (!low_power_mode && (angle > 355 || angle < 5))
   {
-    digitalWrite(_north_led_pin, HIGH);
+    digitalWrite(_north_led_pin, _north_led_on_level);
   }
   else
   {
-    digitalWrite(_north_led_pin, LOW);
+    digitalWrite(_north_led_pin, _north_led_off_level);
   }
 }
 
@@ -172,7 +192,7 @@ void WN_Core::loop()
   }
 
   // reset the speed led for flash effect
-  digitalWrite(_speed_led_pin, LOW);
+  digitalWrite(_speed_led_pin, _speed_led_off_level);
 
   if (ticks_cnt % SAMPLING_WINDOW_TICKS == 0)
   { // counting window has elapsed
