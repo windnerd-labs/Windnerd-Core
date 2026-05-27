@@ -29,15 +29,31 @@ HardwareTimer *tickerTimer = nullptr;
 // in low power mode, measure vane angle every 500 ms
 #define LOW_POWER_VANE_TICKS 5
 
+// Minimum spacing between accepted pulses (us). Real rotor pulses stay well below
+// this rate even in extreme winds, so anything faster is interference.
+#define SPEED_PULSE_MIN_INTERVAL_US 10000
+
 static volatile bool wn_ticker = false;         // flag to indicate that a tick interrupt has happened
 static volatile uint32_t speed_pulse_count = 0; // to be incremented by rising edge interrupts on speed pulse input
 static volatile bool low_power_mode = false;
 static volatile uint8_t isr_speed_led_pin = CORE_SPEED_LED_PIN;
 static volatile uint8_t isr_speed_led_on_level = HIGH; // resolved in begin() based on drive mode
+static volatile uint8_t isr_speed_input_pin = CORE_SPEED_INPUT_PIN;
+static volatile uint32_t last_speed_pulse_us = 0;
 
 
 void onSpeedPulseISR()
 {
+  // pin confirmation: reject sub-us glitches the edge latch saw but the line didn't hold
+  if (digitalRead(isr_speed_input_pin) == LOW)
+    return;
+
+  // time-based debounce: reject pulses arriving faster than physically possible
+  uint32_t now = micros();
+  if (now - last_speed_pulse_us < SPEED_PULSE_MIN_INTERVAL_US)
+    return;
+  last_speed_pulse_us = now;
+
   if (!low_power_mode)
     digitalWrite(isr_speed_led_pin, isr_speed_led_on_level); // signal pulse by turning the speed LED ON, it will be turned OFF during the next tick
   speed_pulse_count++;
@@ -65,6 +81,7 @@ WN_Core::WN_Core(
       _wind_update_period_sec(DEFAULT_UPDATE_PERIOD_SEC)
 {
   isr_speed_led_pin = _speed_led_pin;
+  isr_speed_input_pin = _speed_input_pin;
 }
 
 void WN_Core::begin()
