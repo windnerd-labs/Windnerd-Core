@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, windnerd.net
+ * Copyright (c) 2026, windnerd.net
  * All rights reserved.
  *
  * This source code is licensed under the BSD 3-Clause License found in the
@@ -9,7 +9,6 @@
 #include "Windnerd_Core.h"
 #include "Windnerd_TMAG5273.h"
 #include <HardwareTimer.h>
-#include <Wire.h>
 
 HardwareTimer *tickerTimer = nullptr;
 
@@ -101,9 +100,6 @@ void WN_Core::begin()
   pinMode(_north_led_pin, _north_led_drive == LED_OPEN_DRAIN ? OUTPUT_OPEN_DRAIN : OUTPUT);
   digitalWrite(_north_led_pin, _north_led_on_level);
 
-  Wire.setSDA(_sda_pin);
-  Wire.setSCL(_scl_pin);
-
   wn_init_angle_sensor(_scl_pin, _sda_pin);
 
   tickerTimer = new HardwareTimer(TIM3);
@@ -193,19 +189,20 @@ void WN_Core::loop()
 
   if (!low_power_mode || ticks_cnt % LOW_POWER_VANE_TICKS == 0)
   {
-
-    uint16_t angle = wn_read_then_make_angle_sensor_sleep();
-
-    if (_invert_polarity)
+    uint16_t angle;
+    if (wn_read_then_make_angle_sensor_sleep(&angle))
     {
-      angle = angle + 180;
+      if (_invert_polarity)
+      {
+        angle = angle + 180;
+      }
+
+      angle = angle % 360; // cap value from 0 to 359
+      signalIfNorth(angle);
+
+      // accumulate with an arbitrary magnitude, we are interested only in direction avg
+      VaneAverager.accumulate((uint32_t)1, angle);
     }
-
-    angle = angle % 360; // cap value from 0 to 359
-    signalIfNorth(angle);
-
-    // accumulate with an arbitrary magnitude, we are interested only in direction avg
-    VaneAverager.accumulate((uint32_t)1, angle);
   }
 
   // reset the speed led for flash effect
