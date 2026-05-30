@@ -225,7 +225,7 @@ void WN_Core::loop()
 
       RollingBuffer.addRawSample(raw_sample);
 
-      wn_instant_wind_sample_t instant_wind_sample = formatRawSample(raw_sample);
+      wn_instant_wind_sample_t instant_wind_sample = formatRawSample(raw_sample, _unit_in_use);
       // trigger the instant wind callback set by user
       triggerInstantWindCb(instant_wind_sample);
     }
@@ -252,12 +252,22 @@ wn_wind_report_t WN_Core::computeReportForRecentPeriodInSec(uint16_t period)
 // Return the formatted wind sample indexed from the newest sample in the rolling buffer.
 wn_instant_wind_sample_t WN_Core::getSampleIndexedFromLast(uint16_t index)
 {
+  return getSampleIndexedFromLast(index, _unit_in_use);
+}
+
+wn_instant_wind_sample_t WN_Core::getSampleIndexedFromLast(uint16_t index, wn_wind_unit_t unit)
+{
   wn_raw_wind_sample_t raw_sample = RollingBuffer.get(index);
-  return formatRawSample(raw_sample);
+  return formatRawSample(raw_sample, unit);
+}
+
+wn_wind_report_t WN_Core::computeReportForPeriodInSecIndexedFromLast(uint16_t period, uint16_t index)
+{
+  return computeReportForPeriodInSecIndexedFromLast(period, index, _unit_in_use);
 }
 
 // Compute a wind report for a period (seconds), offset by an index (seconds) from the latest data.
-wn_wind_report_t WN_Core::computeReportForPeriodInSecIndexedFromLast(uint16_t period, uint16_t index)
+wn_wind_report_t WN_Core::computeReportForPeriodInSecIndexedFromLast(uint16_t period, uint16_t index, wn_wind_unit_t unit)
 {
 
   uint16_t samples_to_average = period / (SAMPLING_WINDOW_TICKS / TICK_HZ); // how many samples should be read depends on the average period set
@@ -278,7 +288,7 @@ wn_wind_report_t WN_Core::computeReportForPeriodInSecIndexedFromLast(uint16_t pe
   periodAverager.computeReportFromAccumulatedValues(&avg_raw_wind_report);
 
   // convert them to speed and trigger the averaging wind callback set by user
-  wn_wind_report_t report = formatRawReport(avg_raw_wind_report);
+  wn_wind_report_t report = formatRawReport(avg_raw_wind_report, unit);
   return report;
 }
 
@@ -310,22 +320,22 @@ void WN_Core::triggerAvgWindCb(wn_wind_report_t &report)
   }
 }
 
-wn_instant_wind_sample_t WN_Core::formatRawSample(wn_raw_wind_sample_t &raw_sample)
+wn_instant_wind_sample_t WN_Core::formatRawSample(wn_raw_wind_sample_t &raw_sample, wn_wind_unit_t unit)
 {
   wn_instant_wind_sample_t sample;
 
-  sample.speed = pulsesToSpeedUnitInUse(raw_sample.pulses);
+  sample.speed = pulsesToSpeed(raw_sample.pulses, unit);
   sample.dir = raw_sample.dir;
   return sample;
 }
 
-wn_wind_report_t WN_Core::formatRawReport(wn_raw_wind_report_t &raw_report)
+wn_wind_report_t WN_Core::formatRawReport(wn_raw_wind_report_t &raw_report, wn_wind_unit_t unit)
 {
   wn_wind_report_t report;
   report.avg_dir = raw_report.dir_avg;
-  report.avg_speed = pulsesToSpeedUnitInUse(raw_report.pulses_avg);
-  report.min_speed = pulsesToSpeedUnitInUse(raw_report.pulses_min);
-  report.max_speed = pulsesToSpeedUnitInUse(raw_report.pulses_max);
+  report.avg_speed = pulsesToSpeed(raw_report.pulses_avg, unit);
+  report.min_speed = pulsesToSpeed(raw_report.pulses_min, unit);
+  report.max_speed = pulsesToSpeed(raw_report.pulses_max, unit);
   return report;
 }
 
@@ -334,11 +344,11 @@ void WN_Core::setSpeedUnit(wn_wind_unit_t unit)
   _unit_in_use = unit;
 }
 
-float WN_Core::pulsesToSpeedUnitInUse(float pulses)
+float WN_Core::pulsesToSpeed(float pulses, wn_wind_unit_t unit)
 {
 
   float speed_ms = pulses * _HZ_to_ms / (SAMPLING_WINDOW_TICKS / TICK_HZ);
-  switch (_unit_in_use)
+  switch (unit)
   {
   case UNIT_MS:
     return speed_ms;

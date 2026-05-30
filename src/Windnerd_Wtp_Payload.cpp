@@ -129,7 +129,9 @@ unsigned int WN_WTP_PAYLOAD::calculatePayloadLength() {
 void WN_WTP_PAYLOAD::composeAndSendReportLine(unsigned int line_index, Print* modem, Print* debug) {
 
   String line = "r";
-  wn_wind_report_t report = _anemometer->computeReportForPeriodInSecIndexedFromLast(60, line_index);
+  // WTP always transmits m/s (the server's default unit) regardless of the
+  // anemometer's display unit, so a stray setSpeedUnit() can't corrupt the feed.
+  wn_wind_report_t report = _anemometer->computeReportForPeriodInSecIndexedFromLast(60, line_index, UNIT_MS);
 
   char wa[SPEED_MAX_LENGTH + 1], wn[SPEED_MAX_LENGTH + 1], wx[SPEED_MAX_LENGTH + 1], wd[DIR_MAX_LENGTH + 1];
   dtostrf(report.avg_speed, SPEED_MAX_LENGTH, 1, wa);
@@ -219,7 +221,7 @@ void WN_WTP_PAYLOAD::composeAndSendLogLine(Print* modem, Print* debug) {
 
 // compose a message to send aggregated instant wind samples via WTP
 void WN_WTP_PAYLOAD::composeAndSendSampleLine(unsigned int line, Print* modem, Print* debug) {
-  wn_instant_wind_sample_t sample = _anemometer->getSampleIndexedFromLast(line);
+  wn_instant_wind_sample_t sample = _anemometer->getSampleIndexedFromLast(line, UNIT_MS);  // always m/s for WTP
   char wi[SPEED_MAX_LENGTH + 1], wd[DIR_MAX_LENGTH + 1];
   dtostrf(sample.speed, SPEED_MAX_LENGTH, 1, wi);
   dtostrf(sample.dir, DIR_MAX_LENGTH, 0, wd);

@@ -85,7 +85,10 @@ public:
   uint8_t getI2cError();
   wn_wind_report_t computeReportForRecentPeriodInSec(uint16_t period);
   wn_wind_report_t computeReportForPeriodInSecIndexedFromLast(uint16_t period, uint16_t index);
+  // Same, but force the speeds into an explicit unit regardless of setSpeedUnit().
+  wn_wind_report_t computeReportForPeriodInSecIndexedFromLast(uint16_t period, uint16_t index, wn_wind_unit_t unit);
   wn_instant_wind_sample_t getSampleIndexedFromLast(uint16_t index);
+  wn_instant_wind_sample_t getSampleIndexedFromLast(uint16_t index, wn_wind_unit_t unit);
 
 private:
   float _HZ_to_ms;
@@ -116,9 +119,9 @@ private:
 
   void (*instantWindCb)(wn_instant_wind_sample_t instant_report) = nullptr;
   void (*avgWindCb)(wn_wind_report_t report) = nullptr;
-  wn_wind_report_t formatRawReport(wn_raw_wind_report_t &raw_report);
-  wn_instant_wind_sample_t formatRawSample(wn_raw_wind_sample_t &raw_sample);
+  wn_wind_report_t formatRawReport(wn_raw_wind_report_t &raw_report, wn_wind_unit_t unit);
+  wn_instant_wind_sample_t formatRawSample(wn_raw_wind_sample_t &raw_sample, wn_wind_unit_t unit);
 
-  float pulsesToSpeedUnitInUse(float pulses);
+  float pulsesToSpeed(float pulses, wn_wind_unit_t unit);
   void signalIfNorth(uint16_t angle);
 };
